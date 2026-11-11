@@ -1,0 +1,115 @@
+{
+  "source": "teleop_control/assets/tianji/flange/motor_adapter.SLDPRT",
+  "original_filename": "电机_天机电机连接法兰.SLDPRT",
+  "source_sha256": "8c896dce3d017ec42ca13ba689b99afe7cb810477b957ba2ac077dd9197664d5",
+  "display_sha256": "ed3aa4c142e42c83f84776091255fd2577a0df26ade4d4336e0c25d613196ae3",
+  "stl_sha256": "a25fb485753fdfee182e49d8d05e6d81d3e9212a159d4c2858f7a19a0b04cf22",
+  "units": "m",
+  "bounds_m": [
+    [
+      -0.0375,
+      -0.0375,
+      0.0
+    ],
+    [
+      0.0375,
+      0.0375,
+      0.052700000000000004
+    ]
+  ],
+  "dimensions_mm": [
+    75.0,
+    75.0,
+    52.7
+  ],
+  "vertices": 6336,
+  "triangles": 4536,
+  "saved_faces": 56,
+  "display_version": 14000,
+  "preview_meshes": {
+    "left": "m54",
+    "right": "m116"
+  },
+  "assembly": {
+    "robot_face_z_mm": 0,
+    "gripper_face_z_mm": 52.7,
+    "robot_hole_centers_xy_mm": [
+      [
+        -17.67766953,
+        -17.67766953
+      ],
+      [
+        -17.67766953,
+        17.67766953
+      ],
+      [
+        17.67766953,
+        -17.67766953
+      ],
+      [
+        17.67766953,
+        17.67766953
+      ]
+    ],
+    "gripper_hole_centers_xy_mm": [
+      [
+        19,
+        0
+      ],
+      [
+        0,
+        19
+      ],
+      [
+        -19,
+        0
+      ],
+      [
+        0,
+        -19
+      ]
+    ],
+    "confirmed_rotation": "Left counterclockwise 45 degrees; right clockwise 45 degrees; viewed from robot towards gripper along flange +Z",
+    "delta_rpy_deg": {
+      "left": [
+        0,
+        0,
+        -45
+      ],
+      "right": [
+        0,
+        0,
+        45
+      ]
+    },
+    "mounts": {
+      "left": {
+        "urdf": "teleop_control/vendor/tianji/Marvin M6-S-L-CCS-696-V4.0 urdf (FUSION)/urdf/marvin_left_with_gripper.urdf",
+        "xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rpy_deg": [
+          0.0,
+          0.0,
+          -90.0
+        ]
+      },
+      "right": {
+        "urdf": "teleop_control/vendor/tianji/Marvin M6-S-R-CCS-696-V4.0 urdf (FUSION)/urdf/marvin_right_with_gripper.urdf",
+        "xyz_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rpy_deg": [
+          0.0,
+          0.0,
+          180.0
+        ]
+      }
+    },
+    "tcp": "Position unchanged; flange-to-TCP orientation follows the corrected gripper mount."
+  }
+}

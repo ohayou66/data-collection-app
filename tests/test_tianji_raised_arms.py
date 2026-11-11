@@ -5,6 +5,7 @@ from teleop_control import tianji_worker
 from marvin_teleop.configuration import configuration
 from marvin_teleop.model import Models
 from marvin_teleop.geometry import inverse,rotation
+from tianji_mount_helpers import right_to_left_tcp
 
 
 @pytest.fixture(scope='module')
@@ -17,6 +18,7 @@ def models():
     ([15.,-30.,5.,-65.,5.,15.,0.],[0.,.25,.65],1.5)])
 def test_continuous_lift_does_not_stop_and_release_in_bursts(models,start,translation,turn):
     l,r=models.arms['left'],models.arms['right'];mirror=l.tracking_mirror
+    tcp_pair=right_to_left_tcp(models)
     q={'right':np.array(start),'left':mirror.signs*np.array(start)}
     v={s:np.zeros(7) for s in q};start_pose=r.fk(q['right']);positions=[];trace=[];mirror_errors=[]
     for arm in (l,r):arm.reset_pose_tracking()
@@ -25,7 +27,7 @@ def test_continuous_lift_does_not_stop_and_release_in_bursts(models,start,transl
         target=start_pose.copy();target[:3,3]+=np.array(translation)*amount
         target[:3,:3]=rotation([1,0,0],turn*amount)@start_pose[:3,:3]
         for side,arm in (('right',r),('left',l)):
-            mapped=target if side=='right' else inverse(mirror.world)@target@mirror.tcp
+            mapped=target if side=='right' else inverse(mirror.world)@target@tcp_pair
             n=arm.pose_tracking_ik(mapped,q[side],.01,180.,velocity=v[side],max_accel=450.,
                 singular_rotation_weight_m=.05,joint_limit_soft_margin_deg=30.,joint_limit_reserve_deg=3.)
             nv=(n-q[side])/.01

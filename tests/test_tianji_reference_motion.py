@@ -8,6 +8,7 @@ from marvin_teleop.configuration import configuration
 from marvin_teleop.model import Models
 from marvin_teleop.geometry import inverse, pose, relative_target, rotation
 from marvin_teleop.mapping import same_facing_map
+from tianji_mount_helpers import right_to_left_tcp
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = json.loads((ROOT / 'tests/fixtures/test_teleop_retarget_reference.json').read_text())
@@ -48,6 +49,7 @@ def test_new_target_does_not_chase_a_previous_unsent_optimizer_goal(models, side
 def test_fast_hand_reversal_tracks_locally_and_preserves_mirrored_continuity(models, turn, error_bound_mm):
     left, right = models.arms['left'], models.arms['right']
     mirror = left.tracking_mirror
+    tcp_pair = right_to_left_tcp(models)
     q = dict(right=np.array([10., -35., 15., -65., 5., 15., -10.]))
     q['left'] = mirror.signs * q['right']
     velocity = {side: np.zeros(7) for side in q}
@@ -62,7 +64,7 @@ def test_fast_hand_reversal_tracks_locally_and_preserves_mirrored_continuity(mod
         target[:3, 3] += np.array([.05, .08, .12]) * amount
         target[:3, :3] = rotation([1, 0, 0], turn * amount) @ anchor[:3, :3]
         for side, arm in (('right', right), ('left', left)):
-            mapped = target if side == 'right' else inverse(mirror.world) @ target @ mirror.tcp
+            mapped = target if side == 'right' else inverse(mirror.world) @ target @ tcp_pair
             n = arm.pose_tracking_ik(mapped, q[side], .01, 180., velocity=velocity[side], max_accel=450., **QUALITY)
             nv = (n - q[side]) / .01
             assert arm.valid_joints(n)

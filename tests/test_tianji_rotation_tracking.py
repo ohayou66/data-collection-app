@@ -13,6 +13,7 @@ from teleop_control import tianji_worker  # Registers the bundled model path.
 from marvin_teleop.configuration import configuration
 from marvin_teleop.geometry import angle, inverse, rotation
 from marvin_teleop.model import Models
+from tianji_mount_helpers import previous_right_tool, right_to_left_tcp
 
 ROOT = Path(__file__).resolve().parents[1]
 QUALITY = dict(singular_rotation_weight_m=.05, joint_limit_soft_margin_deg=30.,
@@ -96,6 +97,7 @@ def test_small_turn_does_not_pull_the_arm_toward_its_joint_centers(models, side,
 def test_continuous_clockwise_and_counterclockwise_roll_tracks_hand_speed(models, side, posture):
     right = models.arms['right']
     mirror = models.arms['left'].tracking_mirror
+    tcp_pair = right_to_left_tcp(models)
     initial = np.array([0. if posture == 'horizontal' else 90., -45., 0., -90., 0., 45., 0.])
     anchor = right.fk(initial)
     # The gripper's forward (local X) axis is horizontal/vertical respectively.
@@ -111,7 +113,7 @@ def test_continuous_clockwise_and_counterclockwise_roll_tracks_hand_speed(models
         amount = .15*np.sin(2*np.pi*tick*.01) if tick < 300 else 0.
         target[:3, :3] = anchor[:3, :3] @ rotation([1, 0, 0], amount)
         if side == 'left':
-            target = inverse(mirror.world) @ target @ mirror.tcp
+            target = inverse(mirror.world) @ target @ tcp_pair
         q, velocity = checked_step(arm, target, q, velocity)
         actual = arm.fk(q)
         errors.append(np.degrees(angle(actual[:3, :3] @ target[:3, :3].T)))
@@ -128,11 +130,15 @@ def test_continuous_clockwise_and_counterclockwise_roll_tracks_hand_speed(models
 def test_reachable_nearby_negative_elbow_is_preferred_during_a_wrist_turn(models, side):
     right = models.arms['right']
     mirror = models.arms['left'].tracking_mirror
+    tcp_pair = right_to_left_tcp(models)
+    # Preserve the original regression's physical turn axis, expressed in
+    # the newly clocked TCP; local Z alone now describes a different motion.
+    turn_axis = (inverse(right.tool) @ previous_right_tool())[:3, :3] @ [0, 0, 1]
     fixture = json.loads((ROOT/'tests/fixtures/tianji_held_target_oscillation.json').read_text())[1]
     initial = np.asarray(fixture['q'])
     anchor = right.fk(initial)
     final = anchor.copy()
-    final[:3, :3] = anchor[:3, :3] @ rotation([0, 0, 1], .08)
+    final[:3, :3] = anchor[:3, :3] @ rotation(turn_axis, .08)
     witness = right.local_negative_ik(final, initial)
     assert witness is not None and witness[3] < -10.
     # This verified pose has both branches. v8 selected J4 ~= +2.24 degrees.
@@ -144,9 +150,9 @@ def test_reachable_nearby_negative_elbow_is_preferred_during_a_wrist_turn(models
     available = False
     for tick in range(350):
         target = anchor.copy()
-        target[:3, :3] = anchor[:3, :3] @ rotation([0, 0, 1], .08*min(1., (tick+1)/100))
+        target[:3, :3] = anchor[:3, :3] @ rotation(turn_axis, .08*min(1., (tick+1)/100))
         if side == 'left':
-            target = inverse(mirror.world) @ target @ mirror.tcp
+            target = inverse(mirror.world) @ target @ tcp_pair
         q, velocity = checked_step(arm, target, q, velocity)
         available |= arm.last_negative_candidate_available
         assert q[3] < 0.
@@ -162,6 +168,7 @@ def test_reachable_nearby_negative_elbow_is_preferred_during_a_wrist_turn(models
 def test_wrist_rotation_velocity_survives_submillimetre_position_jitter(models, side, posture, axis):
     right = models.arms['right']
     mirror = models.arms['left'].tracking_mirror
+    tcp_pair = right_to_left_tcp(models)
     initial = np.array([0. if posture == 'horizontal' else 90., -45., 0., -90., 0., 45., 0.])
     anchor = right.fk(initial)
     arm = models.arms[side]
@@ -175,7 +182,7 @@ def test_wrist_rotation_velocity_survives_submillimetre_position_jitter(models, 
             target[:3, :3] = anchor[:3, :3] @ rotation(np.eye(3)[axis], .15*np.sin(2*np.pi*tick*.01))
             target[:3, 3] += .0003*np.sin(tick*.53+np.arange(3)*1.7)
         if side == 'left':
-            target = inverse(mirror.world) @ target @ mirror.tcp
+            target = inverse(mirror.world) @ target @ tcp_pair
         q, velocity = checked_step(arm, target, q, velocity)
         errors.append(np.degrees(angle(arm.fk(q)[:3, :3] @ target[:3, :3].T)))
         positions.append(np.linalg.norm(arm.fk(q)[:3, 3]-target[:3, 3]))

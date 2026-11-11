@@ -12,6 +12,14 @@
       "original_cached_triangles": 1037053,
       "retained_housing_triangles": 2558,
       "max_vertex_match_error_m": 0.0
+    },
+    {
+      "source": "teleop_control/assets/tianji/flange/motor_adapter.SLDPRT",
+      "original_filename": "电机_天机电机连接法兰.SLDPRT",
+      "source_sha256": "8c896dce3d017ec42ca13ba689b99afe7cb810477b957ba2ac077dd9197664d5",
+      "mesh": "part_53.stl",
+      "action": "replace flange with updated standalone CAD display mesh",
+      "assembly_pose": "Original part frame; gripper_mount rotated +45 degrees about flange Z from the previous adapter mounting"
     }
   ],
   "source_cached_triangles": 1800075,
@@ -54,8 +62,8 @@
       0.23458349379622095
     ]
   ],
-  "original_triangles": 765580,
-  "visual_triangles": 516957,
+  "original_triangles": 767748,
+  "visual_triangles": 519125,
   "configuration": "Défaut",
   "gripper_joints": "one drive and two opposing mimic jaw joints; corrected symmetric pose",
   "parts": [
@@ -4150,8 +4158,8 @@
         0.8,
         1
       ],
-      "original_triangles": 2368,
-      "visual_triangles": 2368,
+      "original_triangles": 4536,
+      "visual_triangles": 4536,
       "assembly_from_part": [
         [
           0.5240984614697084,
@@ -4206,23 +4214,26 @@
       ],
       "bounds_m": [
         [
-          -0.03750000149011612,
-          -0.037482213228940964,
+          -0.0375,
+          -0.0375,
           0.0
         ],
         [
-          0.03750000149011612,
-          0.037482213228940964,
-          0.05270000174641609
+          0.0375,
+          0.0375,
+          0.052700000000000004
         ]
-      ]
+      ],
+      "source": "teleop_control/assets/tianji/flange/motor_adapter.SLDPRT",
+      "original_filename": "电机_天机电机连接法兰.SLDPRT",
+      "source_sha256": "8c896dce3d017ec42ca13ba689b99afe7cb810477b957ba2ac077dd9197664d5"
     }
   ],
   "urdf_registration": {
     "mount_rpy_deg": [
-      0,
-      0,
-      45
+      0.0,
+      0.0,
+      180.0
     ],
     "upper_gripper_clocking_deg": -13.393059447531584,
     "visual_origins": {

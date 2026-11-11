@@ -4,7 +4,7 @@
 Format references (independent public format research, not SolidWorks APIs):
 https://github.com/blussyya/sldprt-format-research/blob/main/docs/format/container.md
 https://github.com/blussyya/sldprt-format-research/blob/main/docs/format/displaylists.md
-This bounded reader is for the bundled DL_VERSION_18000 part, not a general CAD
+This bounded reader is for the bundled DL_VERSION_18000 / 14000 parts, not a general CAD
 converter. It retains the CAD coordinate system and does not infer assembly poses.
 """
 import hashlib
@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'teleop_control/assets/kuavo/flange'
 
 
-def streams(data):
+def streams(data, *, display_version=18000):
+    assert display_version in (18000, 14000), 'Unvalidated display-list version'
     assert data[4:8] == b'\0\0\0\4', 'Unsupported SolidWorks container'
     result = {}
     cursor = 0
@@ -37,11 +38,11 @@ def streams(data):
         payload = zlib.decompress(data[start:start+packed], -15)
         assert len(payload) == size and zlib.crc32(payload) == crc, name
         result[name] = payload
-    assert '_DL_VERSION_18000/DLUpdateStamp' in result, 'Unvalidated display-list version'
+    assert f'_DL_VERSION_{display_version}/DLUpdateStamp' in result, 'Unexpected display-list version'
     return result
 
 
-def display_mesh(data):
+def display_mesh(data, *, expected_faces=21):
     def array(offset, stride, kind, dtype):
         s, k, marker, count = struct.unpack_from('<4I', data, offset)
         assert (s, k, marker) == (stride, kind, 2) and count < 100_000
@@ -85,7 +86,7 @@ def display_mesh(data):
             for i in range(2, int(length)):
                 triangles.append([base+i-2, base+i-1, base+i] if i%2 == 0 else [base+i-1, base+i-2, base+i])
             base += int(length)
-    assert len(boxes) == 21, 'Supplied flange should have 21 saved faces'
+    assert len(boxes) == expected_faces, f'Expected {expected_faces} saved faces, found {len(boxes)}'
     bounds = [np.min(np.array(boxes)[:,0], axis=0), np.max(np.array(boxes)[:,1], axis=0)]
     return dict(vertices=positions, faces=triangles), np.array(bounds)
 

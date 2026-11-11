@@ -68,8 +68,10 @@ class CollectionTests(unittest.TestCase):
         self.assertEqual(b[0]['tensors']['state__left_effector__opening_angle'],[None])
 
     def test_graceful_request_keeps_socket_readable(self):
+        import threading
         from unittest.mock import Mock
         c=object.__new__(FusionStreamClient);c._stream_socket=Mock()
+        c._control_lock = threading.Lock()
         c.request_stop();c.request_stop()
         c._stream_socket.sendall.assert_called_once_with(b'S')
         c._stream_socket.shutdown.assert_not_called()

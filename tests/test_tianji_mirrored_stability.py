@@ -10,6 +10,7 @@ from marvin_teleop.model import Models
 from marvin_teleop.mirror import LeftFromRight
 from marvin_teleop.geometry import inverse, relative_target, transform, rotation
 from marvin_teleop.mapping import same_facing_map
+from tianji_mount_helpers import previous_right_tool, right_to_left_tcp
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT/'teleop_control/vendor/tianji/teleop/marvin_teleop/config.json'
@@ -38,9 +39,11 @@ def bounded_step(arm, target, q, v, dt=.01):
 def test_held_target_stops_instead_of_repeatedly_reversing(models,case,noise):
     left,right = models.arms['left'],models.arms['right']
     mirror = left.tracking_mirror
+    tcp_pair = right_to_left_tcp(models)
     qr = np.array(case['q']);ql = SIGNS*qr
     vr,vl = np.zeros(7),np.zeros(7)
-    target = np.array(case['target']);traces = {s:[] for s in ('left','right')}
+    target = np.array(case['target']) @ inverse(previous_right_tool()) @ right.tool
+    traces = {s:[] for s in ('left','right')}
     left.reset_pose_tracking();right.reset_pose_tracking()
     for tick in range(1100):
         observed = target.copy()
@@ -48,7 +51,7 @@ def test_held_target_stops_instead_of_repeatedly_reversing(models,case,noise):
             observed[:3,3] += .00002*np.sin(tick*.17+np.arange(3))
             observed[:3,:3] = rotation([0,0,1],.0001*np.sin(tick*.13))@target[:3,:3]
         qr,vr = bounded_step(right,observed,qr,vr)
-        ql,vl = bounded_step(left,inverse(mirror.world)@observed@mirror.tcp,ql,vl)
+        ql,vl = bounded_step(left,inverse(mirror.world)@observed@tcp_pair,ql,vl)
         np.testing.assert_allclose(ql,SIGNS*qr,atol=1e-6)
         traces['left'].append(ql.copy());traces['right'].append(qr.copy())
     for trace in traces.values():
@@ -61,6 +64,7 @@ def test_held_target_stops_instead_of_repeatedly_reversing(models,case,noise):
 @pytest.mark.parametrize('start', [[0.]*7,[20.,-35,15,-65,5,15,-10]])
 def test_same_anatomical_hand_motion_produces_mirrored_full_joint_trajectory(models,start):
     l,r = models.arms['left'],models.arms['right']
+    tcp_pair = right_to_left_tcp(models)
     qr = np.array(start);ql = SIGNS*qr;vl,vr = np.zeros(7),np.zeros(7)
     l.reset_pose_tracking();r.reset_pose_tracking()
     f = np.diag([-1.,1.,1.,1.])
@@ -73,7 +77,7 @@ def test_same_anatomical_hand_motion_produces_mirrored_full_joint_trajectory(mod
         h[:3,:3] = rotation([0,1,0],amount*.3)@h[:3,:3]
         tr = relative_target(h,hand0r,tcp0r,basis,1.)
         tl = relative_target(f@h@f,hand0l,tcp0l,basis,1.)
-        np.testing.assert_allclose(l.tracking_mirror.world@tl@l.tracking_mirror.tcp,tr,atol=1e-10)
+        np.testing.assert_allclose(l.tracking_mirror.world@tl@inverse(tcp_pair),tr,atol=1e-10)
         qr,vr = bounded_step(r,tr,qr,vr);ql,vl = bounded_step(l,tl,ql,vl)
         np.testing.assert_allclose(ql,SIGNS*qr,atol=1e-6)
 
