@@ -1,0 +1,471 @@
+{
+  "schema": 1,
+  "policy": "all_cad_visuals_grouped_v1",
+  "part_count": 54,
+  "cad_source": "带电机/组装2.SLDASM",
+  "cad_source_sha256": "9d0fd55592f15bdb5704ab970af0ab24a6cc0a8e00a36414e374bf620d243557",
+  "source_manifest_sha256": "d4e97e245cfa548d986c5e1334a3bced21c007a9530074e06fd7816af535f243",
+  "urdf_sha256": "72986f76533aa0d512b79487a8fc488cc554b37907dfee934e9dd6b0a319e94d",
+  "mesh_sha256": {
+    "../meshes/gripper/part_00.stl": "64aa41c7a614e34ea448399fb653221ee1e5a69d23539bbd8729d4e247d3ef53",
+    "../meshes/gripper/part_02.stl": "d7fad8891f18eb8da9931a8b97f9a1eb0ac754df4f496bb038842212a5136493",
+    "../meshes/gripper/part_03.stl": "bef20da3460713c30ee0f503b78435300db06414b1df339cc29180c2a991f4af",
+    "../meshes/gripper/part_04.stl": "010da9884f7406a41ce38b3eef438f988567e3adaa7964c39ed0dae4cb81be03",
+    "../meshes/gripper/part_05.stl": "958ca29a797cf9ad710d6f8f3227950ec174bf2acbc2dd1d09faea8d19e8482c",
+    "../meshes/gripper/part_06.stl": "35186ad8601fcecf1a31595e9249ee90a6e368a183b39678c82304c14cb8f7e5",
+    "../meshes/gripper/part_07.stl": "e2aa61675f646b5e43d17030da10edc4d5fbf0f1edda30fff2acf0f6b3a60462",
+    "../meshes/gripper/part_08.stl": "cb72481d39f3eb8df22e5f64f028adc08472b53802def47572eea66a32499fae",
+    "../meshes/gripper/part_09.stl": "e1d8f7a2c8f82bb94483ae48b7f887ac0e3259974d9a0ff02d2f69597669fe5a",
+    "../meshes/gripper/part_10.stl": "3ff48f924f4d4448b3669d371d5a0843a83cb1bc971229037b75700c90c6412c",
+    "../meshes/gripper/part_11.stl": "6e660764104bb9f30255427a42e868a0da6c16df5fd59c9208174c30555ee979",
+    "../meshes/gripper/part_12.stl": "1667520e14db17e8a84450132d175517cdf0f13a7de81030ff1db7cc58d25627",
+    "../meshes/gripper/part_13.stl": "7b93d6dc6a3a4d810dcbd6ea5ec1c31ba93b181773d08d49c28246c6d08962a0",
+    "../meshes/gripper/part_14.stl": "06224d5e77e9709f0bbf805c9bb507a5b3359c203b1e2b47f9c632c4e8cdc961",
+    "../meshes/gripper/part_15.stl": "ce2dbc9f0c6a0110714c316dfba40ae43c0fadaaaeae15b195e6a5b7cc22d933",
+    "../meshes/gripper/part_16.stl": "f5b8d59862b2b87880b7ca4f0b9e1d00d052698dfdf7362498289dc121e8161a",
+    "../meshes/gripper/part_20.stl": "398938f528b9b20ea7f29b9613c604538ebdcaa4639092f8df33229a736ff30b",
+    "../meshes/gripper/part_22.stl": "4ea5ee992b70853e353c837ab2cc28b01933a623c4bb765d6da92f40cdef9077",
+    "../meshes/gripper/part_23.stl": "6c645517b27610d15c25d644562c39bb4e95f78de0a0cec277a24b19b68db9d3",
+    "../meshes/gripper/part_24.stl": "f28619c5091ad5ebf6ccdd34bd24f65dbaa127c18a74ffea206016dceec33ca7",
+    "../meshes/gripper/part_25.stl": "9c3744a0a9f729cad197b07cfa5427232f8efe8624d8b8bb484ec5c0b358b95b",
+    "../meshes/gripper/part_26.stl": "7b8a8972ff5457870dcc63fb67cdb9c24af3ae857caabb66640e4a17334a6d9d",
+    "../meshes/gripper/part_27.stl": "a5424147a65f1cda714042da6a4db42026e29a459a9c80aa25509d3036d28c58",
+    "../meshes/gripper/part_28.stl": "f076037ca7b46cf20fda88cc3e451fc926ffb8e1fdbd2a7f65ac0464318fe07f",
+    "../meshes/gripper/part_29.stl": "5e492744c7c6cbb7bf2c544da48d433b67b831f4289a4dc77db8c41fb4cadf6f",
+    "../meshes/gripper/part_30.stl": "f0b504e3b16b2f7ef4f7afd3a6d97879f11b7be95ff9e880784e256e1bcb8512",
+    "../meshes/gripper/part_31.stl": "f97aebfe19562b7aac033dda529f7843c8a4370c91a9da8baf27d009c633ee72",
+    "../meshes/gripper/part_32.stl": "50473b601bf6b06c593f4ef37648c77f0ed0c5d83da1edd316e615c9aede340a",
+    "../meshes/gripper/part_33.stl": "36f1ca5513ff8fbad4d54bac87ba8041de74d73ff3b8f47ef546192bcb43336a",
+    "../meshes/gripper/part_34.stl": "dcbe7e20fbc73ce5e81eb7a124bf1b8f03ddb055706c9e188f65b68f221fe61d",
+    "../meshes/gripper/part_35.stl": "ecbd0cbc75c4eb6c872e380b074a3e7de36fc5d5e71637625def51a4615277d4",
+    "../meshes/gripper/part_36.stl": "446093e01e517e6251a9d8fa966c9bc604b7fcb3590a394859b94e5eb0914559",
+    "../meshes/gripper/part_37.stl": "704739092150e30870a73512bda7b65aff5a47773a049aa4a5bbb6527da3d52d",
+    "../meshes/gripper/part_38.stl": "a9f1426b61abfc4f15978b3f59a4fe367f93ac5cf52ce64f3f273aebeb5602de",
+    "../meshes/gripper/part_39.stl": "7d785411c070e35960364426b6f68417e8f2cd9759c1818d4499885eb7f50eb9",
+    "../meshes/gripper/part_40.stl": "97229f83f1f3af9f1933dbbd4d55f8551a65e980393ea872be6a5f6f2bf43aab",
+    "../meshes/gripper/part_41.stl": "8e3a1a744246afec14b415a341043c375b355d8d05b7c206f84db0c0683a7c74",
+    "../meshes/gripper/part_42.stl": "806a6e0370df79289d59c45af870420129a5fc26419b722ae7e76a2b3ecc7475",
+    "../meshes/gripper/part_43.stl": "ec4b1ef772810d05b2addff8f658c2aa6c47447ae6f7fc1a8914f3d016386868",
+    "../meshes/gripper/part_44.stl": "4f1334868001e033086f98ff046e23f63703942cab06b053dbfa512a83d6ae96",
+    "../meshes/gripper/part_45.stl": "7533b11f2a5649d0a20ee6a831bea2e017f0f0ea58b09e1662603c137e260273",
+    "../meshes/gripper/part_46.stl": "60c0efa7e36ecd05b90dda216ee9ddf22a73e76ae42ccf3bbdfb95153e805c8f",
+    "../meshes/gripper/part_47.stl": "90c6d2c87806449893790e9793337cc09a67693fea9f28814c1d4623cbafbb66",
+    "../meshes/gripper/part_48.stl": "336115765fc8f0c95134429b4bb586a7e2a9aec8c79a0c64a51d03f238c122a9",
+    "../meshes/gripper/part_51.stl": "39e5972992fc2441fe8012c1471e6661a041f71dcc8ad9376578d6ed525fd178",
+    "../meshes/gripper/part_53.stl": "a25fb485753fdfee182e49d8d05e6d81d3e9212a159d4c2858f7a19a0b04cf22",
+    "../meshes/gripper/part_21.stl": "dd3aef74f3f35b81fc8eaf61221a6ec396ff7efa07be827f16581e640e2d703d",
+    "../meshes/gripper/part_52.stl": "4b0c36073a3e1e6f59433f7c2f5ed64370d66e9b945591430c01e566a6c1aa54",
+    "../meshes/gripper/part_01.stl": "e625409aaf34efaa24a9a3e1cf66af9659fb1654d42af0cd0b77d41793b3f4d5",
+    "../meshes/gripper/part_18.stl": "4424440c05163039a9123620ae3d5fee0068ec48cafc5359d8cfb5d93d4b9d95",
+    "../meshes/gripper/part_49.stl": "1a8de9a8566e8f2fa6aedc3652b1d6b3e8533278a418966fea211c0ea1deadf2",
+    "../meshes/gripper/part_17.stl": "a2938cbb450ed91fa6ed7b9b2540ea510107794d0319b16e18eb1dc276b42c37",
+    "../meshes/gripper/part_19.stl": "ee09c88db8e86e7c536ef587ed8e32bd159c65018881d6ef9c3373f6bfa89b88",
+    "../meshes/gripper/part_50.stl": "1f4456ebe0381038d61a68983f62cdc25ab659f2c447a0ae6796ef1291694a3e",
+    "../meshes/gripper/collision/housing.stl": "8c24190868683fe42e976530c3c19f68092ce2ac7c07f10fdb3e65b2f4c86828",
+    "../meshes/gripper/collision/camera_support.stl": "53ef065593b38ac602396a2bc4f54a2d5126e1002ff17d6636f15a89ca43beba",
+    "../meshes/gripper/collision/motor.stl": "88c79a8cd00994bc014971635643f79d8b1966d42977aaca584ac404628ed8e0",
+    "../meshes/gripper/collision/adapter.stl": "a22be4153a22db51fefde36ad41c31a72b0163a9bbca3ffc2b2233a70bbdd165",
+    "../meshes/gripper/collision/jaw_1.stl": "df56cfe74e73645dcf7690755380585a2f36216378b02056c85edae95ceacf2e",
+    "../meshes/gripper/collision/jaw_17.stl": "36a6d5aa6218ba33dfd28968a536304382893203b5d890cc1787bbb19f8029ce",
+    "../meshes/gripper/collision/shaft.stl": "ff0c2062e95527a71c8ea9796e520ec1483d58af31345405d92d5b395863ab21"
+  },
+  "numerical_padding_m": 1e-06,
+  "groups": [
+    {
+      "group": "housing",
+      "link": "gripper_L",
+      "collision": "cad_housing_L",
+      "parts": [
+        {
+          "index": 0,
+          "mesh": "part_00.stl",
+          "instance": "下壳体-1@组装2"
+        },
+        {
+          "index": 2,
+          "mesh": "part_02.stl",
+          "instance": "螺母M3-2@组装2"
+        },
+        {
+          "index": 3,
+          "mesh": "part_03.stl",
+          "instance": "螺母M3-3@组装2"
+        },
+        {
+          "index": 4,
+          "mesh": "part_04.stl",
+          "instance": "十字头螺丝M3-20-4@组装2"
+        },
+        {
+          "index": 5,
+          "mesh": "part_05.stl",
+          "instance": "轴承-5@组装2"
+        },
+        {
+          "index": 6,
+          "mesh": "part_06.stl",
+          "instance": "轴承-8@组装2"
+        },
+        {
+          "index": 20,
+          "mesh": "part_20.stl",
+          "instance": "上壳体加外套右手-1@组装2"
+        },
+        {
+          "index": 51,
+          "mesh": "part_51.stl",
+          "instance": "轴承-9@组装2"
+        }
+      ],
+      "low_m": [
+        -0.04957524212128787,
+        -0.0457153034985484,
+        0.10519900010728836
+      ],
+      "high_m": [
+        0.045715604374189034,
+        0.04957504561140196,
+        0.16421060426330567
+      ],
+      "triangles": 12
+    },
+    {
+      "group": "camera_support",
+      "link": "gripper_L",
+      "collision": "cad_camera_support_L",
+      "parts": [
+        {
+          "index": 7,
+          "mesh": "part_07.stl",
+          "instance": "杆1-1@组装2"
+        },
+        {
+          "index": 8,
+          "mesh": "part_08.stl",
+          "instance": "摄像头-1@组装2"
+        },
+        {
+          "index": 9,
+          "mesh": "part_09.stl",
+          "instance": "螺母M2-1@组装2"
+        },
+        {
+          "index": 10,
+          "mesh": "part_10.stl",
+          "instance": "螺丝M2-6-1@组装2"
+        },
+        {
+          "index": 11,
+          "mesh": "part_11.stl",
+          "instance": "螺母M2-2@组装2"
+        },
+        {
+          "index": 12,
+          "mesh": "part_12.stl",
+          "instance": "螺母M2-3@组装2"
+        },
+        {
+          "index": 13,
+          "mesh": "part_13.stl",
+          "instance": "螺母M2-4@组装2"
+        },
+        {
+          "index": 14,
+          "mesh": "part_14.stl",
+          "instance": "螺丝M2-6-2@组装2"
+        },
+        {
+          "index": 15,
+          "mesh": "part_15.stl",
+          "instance": "螺丝M2-6-3@组装2"
+        },
+        {
+          "index": 16,
+          "mesh": "part_16.stl",
+          "instance": "螺丝M2-6-4@组装2"
+        }
+      ],
+      "low_m": [
+        0.011666038490333411,
+        -0.0843721510955771,
+        0.11647549109363556
+      ],
+      "high_m": [
+        0.08437093971359765,
+        -0.011666486312211668,
+        0.17580472095108032
+      ],
+      "triangles": 12
+    },
+    {
+      "group": "motor",
+      "link": "gripper_L",
+      "collision": "cad_motor_L",
+      "parts": [
+        {
+          "index": 22,
+          "mesh": "part_22.stl",
+          "instance": "电机外壳1-1@组装2"
+        },
+        {
+          "index": 23,
+          "mesh": "part_23.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_1.stp-1@电机.stp"
+        },
+        {
+          "index": 24,
+          "mesh": "part_24.stl",
+          "instance": "电机.stp-4@组装2/4340__3D_20240814_1_2_4.stp-1@电机.stp"
+        },
+        {
+          "index": 25,
+          "mesh": "part_25.stl",
+          "instance": "电机.stp-4@组装2/4310_202409130001.stp-1@电机.stp"
+        },
+        {
+          "index": 26,
+          "mesh": "part_26.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_3.stp-1@电机.stp"
+        },
+        {
+          "index": 27,
+          "mesh": "part_27.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_2.stp-1@电机.stp"
+        },
+        {
+          "index": 28,
+          "mesh": "part_28.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_5.stp-1@电机.stp"
+        },
+        {
+          "index": 29,
+          "mesh": "part_29.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_6.stp-1@电机.stp"
+        },
+        {
+          "index": 30,
+          "mesh": "part_30.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_7.stp-1@电机.stp"
+        },
+        {
+          "index": 31,
+          "mesh": "part_31.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_8.stp-1@电机.stp"
+        },
+        {
+          "index": 32,
+          "mesh": "part_32.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_9.stp-1@电机.stp"
+        },
+        {
+          "index": 33,
+          "mesh": "part_33.stl",
+          "instance": "电机.stp-4@组装2/4310__3D_20240814_1_2_10.stp-1@电机.stp"
+        },
+        {
+          "index": 34,
+          "mesh": "part_34.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-1@电机.stp"
+        },
+        {
+          "index": 35,
+          "mesh": "part_35.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-2@电机.stp"
+        },
+        {
+          "index": 36,
+          "mesh": "part_36.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-3@电机.stp"
+        },
+        {
+          "index": 37,
+          "mesh": "part_37.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-4@电机.stp"
+        },
+        {
+          "index": 38,
+          "mesh": "part_38.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-5@电机.stp"
+        },
+        {
+          "index": 39,
+          "mesh": "part_39.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-6@电机.stp"
+        },
+        {
+          "index": 40,
+          "mesh": "part_40.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L6.stp-7@电机.stp"
+        },
+        {
+          "index": 41,
+          "mesh": "part_41.stl",
+          "instance": "电机.stp-4@组装2/_M2_5-100001.stp-1@电机.stp"
+        },
+        {
+          "index": 42,
+          "mesh": "part_42.stl",
+          "instance": "电机.stp-4@组装2/_M2_5-100001.stp-2@电机.stp"
+        },
+        {
+          "index": 43,
+          "mesh": "part_43.stl",
+          "instance": "电机.stp-4@组装2/_M2_5-100001.stp-3@电机.stp"
+        },
+        {
+          "index": 44,
+          "mesh": "part_44.stl",
+          "instance": "电机.stp-4@组装2/_M2_5-100001.stp-4@电机.stp"
+        },
+        {
+          "index": 45,
+          "mesh": "part_45.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L4.stp-1@电机.stp"
+        },
+        {
+          "index": 46,
+          "mesh": "part_46.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L4.stp-2@电机.stp"
+        },
+        {
+          "index": 47,
+          "mesh": "part_47.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L4.stp-3@电机.stp"
+        },
+        {
+          "index": 48,
+          "mesh": "part_48.stl",
+          "instance": "电机.stp-4@组装2/M2_5-L4.stp-4@电机.stp"
+        }
+      ],
+      "low_m": [
+        -0.031877761466264726,
+        -0.03190099610185623,
+        0.05229899870061874
+      ],
+      "high_m": [
+        0.031877761466264726,
+        0.03190099610185623,
+        0.10520100010728836
+      ],
+      "triangles": 12
+    },
+    {
+      "group": "adapter",
+      "link": "gripper_L",
+      "collision": "cad_adapter_L",
+      "parts": [
+        {
+          "index": 53,
+          "mesh": "part_53.stl",
+          "instance": "天机电机连接法兰-1@组装2"
+        }
+      ],
+      "low_m": [
+        -0.03750100149011612,
+        -0.03744600130414963,
+        -1e-06
+      ],
+      "high_m": [
+        0.03750100149011612,
+        0.03744600130414963,
+        0.05270100174641609
+      ],
+      "triangles": 12
+    },
+    {
+      "group": "jaw_1",
+      "link": "gripper_L_1",
+      "collision": "cad_jaw_1_L",
+      "parts": [
+        {
+          "index": 1,
+          "mesh": "part_01.stl",
+          "instance": "夹爪脚垫版左手-4@组装2"
+        },
+        {
+          "index": 18,
+          "mesh": "part_18.stl",
+          "instance": "脚垫-1@组装2"
+        },
+        {
+          "index": 49,
+          "mesh": "part_49.stl",
+          "instance": "左右贯穿杆-1@组装2"
+        }
+      ],
+      "low_m": [
+        -0.02407513901290426,
+        -0.035689050157847846,
+        -0.014887375816914098
+      ],
+      "high_m": [
+        0.03626813158509409,
+        0.020825992650360815,
+        0.09267765491559163
+      ],
+      "triangles": 12
+    },
+    {
+      "group": "jaw_17",
+      "link": "gripper_L_17",
+      "collision": "cad_jaw_17_L",
+      "parts": [
+        {
+          "index": 17,
+          "mesh": "part_17.stl",
+          "instance": "镜向夹爪支撑1-12@组装2"
+        },
+        {
+          "index": 19,
+          "mesh": "part_19.stl",
+          "instance": "脚垫-3@组装2"
+        },
+        {
+          "index": 50,
+          "mesh": "part_50.stl",
+          "instance": "左右贯穿杆-2@组装2"
+        }
+      ],
+      "low_m": [
+        -0.017611102136982436,
+        -0.026629833903634936,
+        -0.014887365677585777
+      ],
+      "high_m": [
+        0.036268435865668996,
+        0.030489207405794375,
+        0.09267765378456519
+      ],
+      "triangles": 12
+    },
+    {
+      "group": "shaft",
+      "link": "gripper_L_shaft",
+      "collision": "cad_shaft_L",
+      "parts": [
+        {
+          "index": 21,
+          "mesh": "part_21.stl",
+          "instance": "贯穿杆2-1@组装2"
+        },
+        {
+          "index": 52,
+          "mesh": "part_52.stl",
+          "instance": "中央齿轮轴-1@组装2"
+        }
+      ],
+      "low_m": [
+        -0.017498588895329,
+        -0.017495152388742972,
+        -0.01120100120401382
+      ],
+      "high_m": [
+        0.017498588895329,
+        0.017495152388742972,
+        0.05580099301433564
+      ],
+      "triangles": 12
+    }
+  ]
+}

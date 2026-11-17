@@ -139,6 +139,9 @@ class ArmModel:
         self.tool = np.eye(4)
         self.control_point_name = "bare_flange"
         self.tool_bound = None
+        from .urdf_collision import load_tool_volumes
+
+        self.tool_volumes = load_tool_volumes(self.path, f"Link7_{letter}")
 
     def configure_tool(self, definition):
         from .tool_frame import parse_tool_frame
@@ -462,6 +465,12 @@ class Models:
             "world_from_stand": world_stand.tolist(),
             "vendor_gravity_in_world": {s: (a.base[:3, :3] @ a.gravity).tolist() for s, a in self.arms.items()},
             "arm_model_sources": {s: str(a.path) for s, a in self.arms.items()},
+            "tool_collision": {
+                s: {"source": str(a.path), "policy": "urdf_full_joint_range_v1",
+                    "volumes": [v.name for v in a.tool_volumes],
+                    "moving_volumes": sum(v.moving for v in a.tool_volumes)}
+                for s, a in self.arms.items()
+            },
             "operator_alignment": "same_facing",
             "operator_convention": behind_operator_convention(),
             "robot_from_operator_rotation": self.robot_from_operator.tolist(),
@@ -579,10 +588,14 @@ class Models:
 
         tool_boxes = {}
         for side, arm in self.arms.items():
-            boxes[side] = [(t, *bound) for t, bound in zip(arm.chain(joints[side]), arm.link_bounds)]
+            chain = arm.chain(joints[side])
+            boxes[side] = [(t, *bound) for t, bound in zip(chain, arm.link_bounds)]
+            tool_boxes[side] = [(v.name, (chain[-1], v.center, v.half), v.moving)
+                                for v in arm.tool_volumes]
             if arm.tool_bound is not None:
-                tool_boxes[side] = (arm.flange_fk(joints[side]), *arm.tool_bound)
-        mesh_boxes = [box for lane in boxes.values() for box in lane] + list(tool_boxes.values())
+                tool_boxes[side].append(('configured_tool', (arm.flange_fk(joints[side]), *arm.tool_bound), False))
+        mesh_boxes = ([box for lane in boxes.values() for box in lane]
+                      + [box for lane in tool_boxes.values() for _, box, _ in lane])
         mesh_hits = {id(box): False for box in mesh_boxes}
         for obstacle in self.obstacles:
             for box, hit in zip(mesh_boxes, obstacle.intersects_many(mesh_boxes, margin)):
@@ -606,22 +619,27 @@ class Models:
                         return f"{side}: link {i + 1} near {base_side} fixed arm base"
                 if mesh_hits[id(box)]:
                     return f"{side}: link {i + 1} near mount/stand"
-            if arm.tool_bound is not None:
-                tool_box = tool_boxes[side]
-                # The tool intentionally touches its mounting parent Link7.
-                for i, box in enumerate(boxes[side][:-1]):
+            for name, tool_box, moving in tool_boxes[side]:
+                # Fixed mounting parts intentionally touch Link7; fingers do not.
+                for i, box in enumerate(boxes[side] if moving else boxes[side][:-1]):
                     if check_overlap(tool_box, box, margin):
-                        return f"{side}: tool near link {i + 1}"
+                        return f"{side}: tool {name} near link {i + 1}"
                 for base_side, base_arm in self.arms.items():
                     if check_overlap(tool_box, base_arm.base_bound, margin):
-                        return f"{side}: tool near {base_side} base"
+                        return f"{side}: tool {name} near {base_side} base"
                 if mesh_hits[id(tool_box)]:
-                    return f"{side}: tool near mount/stand"
-                boxes[side].append(tool_box)
+                    return f"{side}: tool {name} near mount/stand"
+        # Do not compare independent swept tool parts with one another: their
+        # envelopes intentionally overlap. They still collide with the peer arm.
+        labels = {side: [f'link {i + 1}' for i in range(len(boxes[side]))]
+                  for side in boxes}
+        for side in boxes:
+            labels[side].extend('tool ' + name for name, _, _ in tool_boxes[side])
+            boxes[side].extend(box for _, box, _ in tool_boxes[side])
         for i, left in enumerate(boxes["left"]):
             for j, right in enumerate(boxes["right"]):
                 if check_overlap(left, right, margin):
-                    return f"arms too close: L{i + 1}/R{j + 1}"
+                    return f"arms too close: L{i + 1}/R{j + 1} ({labels['left'][i]} / {labels['right'][j]})"
         return None
 
 

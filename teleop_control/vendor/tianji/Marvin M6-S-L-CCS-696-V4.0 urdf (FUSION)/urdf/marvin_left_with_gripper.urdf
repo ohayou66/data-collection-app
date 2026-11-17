@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<robot name="marvin_l_with_gripper">
+<robot name="marvin_l_with_gripper" tool_collision_manifest="marvin_left_with_gripper.collision.json">
   <link name="Base_L">
     <inertial>
       <origin xyz="0.00032267 4.798E-05 0.04066353" rpy="0 0 0" />
@@ -244,12 +244,6 @@
         <color rgba="0.79 0.82 0.86 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_00">
-      <origin xyz="0 0 0" rpy="0 0 -0.233752984275" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_00.stl" />
-      </geometry>
-    </collision>
     <visual name="gL_02">
       <origin xyz="0 0 0" rpy="0 0 -0.233752984275" />
       <geometry>
@@ -403,12 +397,6 @@
         <color rgba="0.79 0.82 0.86 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_22">
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_22.stl" />
-      </geometry>
-    </collision>
     <visual name="gL_23">
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
@@ -661,17 +649,35 @@
         <color rgba="0.72 0.75 0.8 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_53">
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_53.stl" />
-      </geometry>
-    </collision>
     <inertial>
       <origin xyz="0.0173978487962 -0.0173985527421 0.0879018604755" rpy="0 0 0" />
       <mass value="0.5599999999999999" />
       <inertia ixx="0.002279585654318638" iyy="0.00227957296689104" izz="0.0016745101131867824" ixy="0" ixz="0" iyz="0" />
     </inertial>
+    <collision name="cad_housing_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/housing.stl" />
+      </geometry>
+    </collision>
+    <collision name="cad_camera_support_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/camera_support.stl" />
+      </geometry>
+    </collision>
+    <collision name="cad_motor_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/motor.stl" />
+      </geometry>
+    </collision>
+    <collision name="cad_adapter_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/adapter.stl" />
+      </geometry>
+    </collision>
   </link>
   <link name="gripper_L_shaft">
     <visual name="gL_21">
@@ -697,6 +703,12 @@
       <mass value="0.08000000000000002" />
       <inertia ixx="3.8087871309740615e-05" iyy="3.809107795905756e-05" izz="1.6325626265346687e-05" ixy="0" ixz="0" iyz="0" />
     </inertial>
+    <collision name="cad_shaft_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/shaft.stl" />
+      </geometry>
+    </collision>
   </link>
   <link name="gripper_L_1">
     <visual name="gL_01">
@@ -708,12 +720,6 @@
         <color rgba="0.79 0.82 0.86 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_01">
-      <origin xyz="-0.00822861675775 -0.0476946707073 -0.136382333742" rpy="-0.396722718402 0.233346120461 -0.0475149182235" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_01.stl" />
-      </geometry>
-    </collision>
     <visual name="gL_18">
       <origin xyz="-0.00822861675775 -0.0476946707073 -0.136382333742" rpy="-0.396722718402 0.233346120461 -0.0475149182235" />
       <geometry>
@@ -723,12 +729,6 @@
         <color rgba="0.12 0.14 0.16 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_18">
-      <origin xyz="-0.00822861675775 -0.0476946707073 -0.136382333742" rpy="-0.396722718402 0.233346120461 -0.0475149182235" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_18.stl" />
-      </geometry>
-    </collision>
     <visual name="gL_49">
       <origin xyz="-0.00822861675775 -0.0476946707073 -0.136382333742" rpy="-0.396722718402 0.233346120461 -0.0475149182235" />
       <geometry>
@@ -743,6 +743,12 @@
       <mass value="0.08000000000000002" />
       <inertia ixx="9.842353058535354e-05" iyy="0.00010140583011828495" izz="4.556528629881749e-05" ixy="0" ixz="0" iyz="0" />
     </inertial>
+    <collision name="cad_jaw_1_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/jaw_1.stl" />
+      </geometry>
+    </collision>
   </link>
   <link name="gripper_L_17">
     <visual name="gL_17">
@@ -754,12 +760,6 @@
         <color rgba="0.79 0.82 0.86 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_17">
-      <origin xyz="0.0109263060445 -0.0165796026979 -0.143347010136" rpy="0.0685092034194 -0.0421050661654 -0.00137287272265" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_17.stl" />
-      </geometry>
-    </collision>
     <visual name="gL_19">
       <origin xyz="0.0109263060445 -0.0165796026979 -0.143347010136" rpy="0.0685092034194 -0.0421050661654 -0.00137287272265" />
       <geometry>
@@ -769,12 +769,6 @@
         <color rgba="0.12 0.14 0.16 1" />
       </material>
     </visual>
-    <collision name="gripper_collision_L_19">
-      <origin xyz="0.0109263060445 -0.0165796026979 -0.143347010136" rpy="0.0685092034194 -0.0421050661654 -0.00137287272265" />
-      <geometry>
-        <mesh filename="../meshes/gripper/part_19.stl" />
-      </geometry>
-    </collision>
     <visual name="gL_50">
       <origin xyz="0.0109263060445 -0.0165796026979 -0.143347010136" rpy="0.0685092034194 -0.0421050661654 -0.00137287272265" />
       <geometry>
@@ -789,6 +783,12 @@
       <mass value="0.08000000000000002" />
       <inertia ixx="9.888106375838761e-05" iyy="9.648394838028121e-05" izz="4.1100970061134626e-05" ixy="0" ixz="0" iyz="0" />
     </inertial>
+    <collision name="cad_jaw_17_L">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/gripper/collision/jaw_17.stl" />
+      </geometry>
+    </collision>
   </link>
   <joint name="gripper_drive_L" type="revolute">
     <parent link="gripper_L" />
@@ -818,7 +818,6 @@
     <child link="gripper_L" />
     <origin xyz="0 0 0" rpy="0 0 -1.5707963267948966" />
   </joint>
-  <!-- Nominal fixed TCP: intersection of motor axis with the plane containing both fixed jaw pivot axes; NOT physical calibration. xyz in metres; tool X=finger approach, Y=jaw opening, Z=right-handed normal. See description/grasp_center.txt. -->
   <link name="grasp_center_L" />
   <joint name="grasp_center_fixed_L" type="fixed">
     <parent link="gripper_L" />
