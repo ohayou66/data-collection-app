@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import sys
+import xml.etree.ElementTree as ET
 
 import numpy as np
 import pytest
@@ -70,7 +71,9 @@ def test_updated_flange_holes_match_robot_and_gripper(side, letter):
     wrist = stl_triangles(mesh_dir / f'Link7_{letter}.STL')
     wrist_in_flange = (wrist - frame[:3, 3]) @ frame[:3, :3]
     robot_holes = hole_centers(wrist_in_flange, 0, 25, 2.6)
-    adapter = stl_triangles(mesh_dir / 'gripper/part_53.stl')
+    urdf = mesh_dir.parent / 'urdf' / f'marvin_{side}_with_gripper.urdf'
+    active_mesh = ET.parse(urdf).find(f".//visual[@name='g{letter}_53']/geometry/mesh")
+    adapter = stl_triangles(urdf.parent / active_mesh.get('filename'))
     bottom_holes = hole_centers(adapter, 0, 25, 3.3)
     top_holes = hole_centers(adapter, .0527, 19, 1.65)
     motor = stl_triangles(mesh_dir / 'gripper/part_27.stl')
