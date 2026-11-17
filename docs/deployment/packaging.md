@@ -1,4 +1,17 @@
-# 一键生成安装包
+# 打包、安装与分发
+
+[文档目录](../README.md) · [项目首页](../../README.md)
+
+> 文档已分类归档；下文命令仍在仓库根目录执行，脚本位置未改变。
+
+| 需要做什么 | 对应步骤 |
+|---|---|
+| 从源码构建完整包 | [构建准备](#构建准备) |
+| 复用已验证的独立运行库生成更新 | [AMD64 更新](#用现有独立运行库构建整套-amd64-更新) |
+| 安装收到的 deb 或升级 App | [安装与升级](#给另一台电脑安装或升级) |
+| 为系统依赖版准备断网安装资源 | [离线安装包](#制作离线安装包) |
+
+## 构建准备
 
 在 App 文件夹打开终端：
 
@@ -91,7 +104,7 @@ sudo apt install ./xiaokai-lab-data-collection_版本号_amd64.deb
 
 界面已移除外部浏览器入口，窗口按屏幕工作区和当前大小排列。按原 WebKit 版重建布局和配色，完整 CAD 模型使用 Qt Quick 3D 原生渲染；显卡兼容问题可尝试应用菜单中的“软件渲染模式”。
 
-程序位于 `/opt/xiaokai-lab-data-collection`；个人配置位于 `~/.config/xiaokai-lab-data-collection/.env`；可写工作副本与日志位于 `~/.local/share/xiaokai-lab-data-collection/workspaces/`。支持 XDG 目录设置。配置不会被新版安装包覆盖，改服务器时修改个人配置；每次打开仍须重新登录。卸载软件不会删除个人采集数据和配置。
+程序位于 `/opt/xiaokai-lab-data-collection`；个人配置位于 `~/.config/xiaokai-lab-data-collection/.env`；可写工作副本与日志位于 `~/.local/share/xiaokai-lab-data-collection/workspaces/`。支持 XDG 目录设置。配置不会被新版安装包覆盖，改服务器时修改个人配置；每次打开仍须由平台重新验证登录，已启用自动登录时由 App 发起验证，详见[登录设置](installation.md#ip--云服务器配置)。卸载软件不会删除个人采集数据和配置。
 
 若这台电脑之前运行过源码版，请先关闭源码版。旧用户菜单快捷方式可能覆盖系统菜单入口；可直接运行 `/usr/bin/xiaokai-lab-data-collection` 确认使用安装版。不要同时启动两个版本占用相同本地端口。
 

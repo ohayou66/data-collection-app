@@ -1,5 +1,7 @@
 # App 接入准备（v2.1，尚未整体验收）
 
+> 本文件为 v2.1 接入阶段历史说明，不表示当前 App 仍未完成该阶段集成。当前使用方式见[天机操作指南](../docs/usage/tianji.md)，保留此文用于理解旧接口和单连接约束。
+
 ## 当前可用接口
 
 `FusionStreamClient.stream(seconds=60, hz=30, joint_hz=100)` 输出 `start/image/joints/health/end` 事件，正常取流不需要 SSH。`client.close()` 停止自己的采集。服务在控制器 `/mnt/fusion-camera` 持久化，已有启动项保持不变；没有为本次更新重启控制器验证。

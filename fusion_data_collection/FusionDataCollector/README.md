@@ -1,6 +1,6 @@
 # 双臂、双夹爪和三路图像采集
 
-> App 集成说明：当前模块已同步新版 MJPEG/YUYV 和夹爪反馈采集逻辑，App 通过同一模块接入遥操作及平台上传。App 使用 `head_color` / `right_color` / `left_color`，不保存 native。完整操作、保存和上传链路以 [App README](../../README.md#tianji-天机) 为准；下文保留独立 CLI 的历史部署说明，不代表当前控制器状态。
+> App 集成说明：当前模块已同步新版 MJPEG/YUYV 和夹爪反馈采集逻辑，App 通过同一模块接入遥操作及平台上传。App 使用 `head_color` / `right_color` / `left_color`，不保存 native。完整操作、保存和上传链路以 [天机操作指南](../../docs/usage/tianji.md) 为准；下文保留独立 CLI 的历史部署说明，不代表当前控制器状态。
 
 启动入口：SDK 根目录 `collect_data.py`。默认输出 `~/桌面/1/日期时间_fusion_随机编号/`。采集器不连接机器人原生 SDK，不发机械臂/夹爪命令；复用正在运行的 Marvin 遥操作反馈。图像与 100 Hz 关节来自独立相机服务的只读接口。
 
