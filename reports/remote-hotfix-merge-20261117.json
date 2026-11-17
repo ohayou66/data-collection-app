@@ -1,0 +1,65 @@
+{
+  "verified_at_utc": "2026-11-17T06:44:57.952488+00:00",
+  "baseline_commit": "623d47e2e48a6b3224d367354b3b342a39b44272",
+  "github_heads_verified": {
+    "teammate": "8060d6acd1a4d75a2a9079056659362abd2a8eac",
+    "origin": "db614d883a01918cad8aa7a9f995bf0f532efdcf"
+  },
+  "remote_source": {
+    "host": "user@10.20.101.196",
+    "build_id": "0.1.0+20261113.full.amd64.standalone",
+    "hotfixes": [
+      "monitor-port-and-old-xr-20261113"
+    ]
+  },
+  "resolved_choices": {
+    "historical_quality_display": "hidden; backend history retained",
+    "pico_mount_position": "full precision from existing CAD reference; orientation unchanged",
+    "new_tianji_tool_collision": "remains disabled"
+  },
+  "validation": {
+    "python_unique_passed": 693,
+    "subtests_passed": 37,
+    "frontend_test_files_passed": 4,
+    "native_camera_self_test": "passed; no USB opened",
+    "xml_suites": {
+      "umi-regression.xml": {
+        "passed": 278,
+        "sha256": "f3bb2002f768be2d715bba7e7b38dd5c44c05fc934ab78db65c3c3bbefd048c3"
+      },
+      "qt-regression.xml": {
+        "passed": 22,
+        "sha256": "93cf29423646e80339119bb1013efd0e4143634260217c4e3d16c1deb70d401d"
+      },
+      "camera-regression.xml": {
+        "passed": 394,
+        "sha256": "f9576e04377f1635bd6eac908e46d5ec94270fa71d9d001d815cb4e02aa18ed0"
+      }
+    },
+    "camera_payload": "verified current capture, libuvc hook and scheduling sources included",
+    "physical_hardware_tested": false,
+    "deployment_tested": false
+  },
+  "changed_files_sha256": {
+    "AGENTS.md": "dc8639bcc50a296eb894e7c01e5b0f852cc11c4741ae54339408ec003624ced1",
+    "README.md": "6a5ef9d1da4f7096b22a93af18aab6836edbd7c3d047b2ad88e486b463fbc24b",
+    "fusion_data_collection/FusionDataCollector/controller_v22/capture_teleop.c": "1bdb9b47bceaa9853c2c5eb4fb09d43f514289f5407330674753844d2bd92b35",
+    "scripts/qt_ui/qml/Umi.qml": "d9fdfecb01d88fbfb060feff473e1bc563b3b11fbfed3749d0456ba9fa18cdc5",
+    "teleop_control/src/teleop_control/umi.py": "500450e7cecb767dd58d82868871313bb2a65a141fdc26731ac0639aae60e01b",
+    "teleop_control/src/teleop_control/umi_queue.py": "884208240b54ec92ff3709f8df2a3b4ca4555b0f20b876df13a0b0d5099a3a60",
+    "teleop_control/src/teleop_control/umi_monitor.py": "95c165ac0da2bfeeedacf49363c90f10585b36689fb5c1d65f940489e5d262b9",
+    "umi_collection/vendor/galaxis/galaxis_description/urdf/galaxis_hand.urdf.xacro": "1644eb158d67615522ec4286bf8a9f85a9fc325e9dd657251f561e1807391b1f",
+    "umi_collection/vendor/galaxis/tools/galaxis_collection.py": "937f261cddfabff8afc6a7e4a72ffbe158362ffa39b1d799a7e523c36d78edf3",
+    "umi_collection/vendor/galaxis/tools/test_galaxis_collection.py": "7671dcb9e314f6e322acef05d4929ecb75206d27316123424d887702728a0bd6",
+    "tests/test_umi_monitor_port.py": "477d1a662e781b85163f01456eb53f4fe76bf9a173627dccc748ac3f55576af0"
+  },
+  "remote_source_sha256": {
+    "scripts/qt_ui/qml/Umi.qml": "d9fdfecb01d88fbfb060feff473e1bc563b3b11fbfed3749d0456ba9fa18cdc5",
+    "teleop_control/src/teleop_control/umi.py": "500450e7cecb767dd58d82868871313bb2a65a141fdc26731ac0639aae60e01b",
+    "teleop_control/src/teleop_control/umi_queue.py": "884208240b54ec92ff3709f8df2a3b4ca4555b0f20b876df13a0b0d5099a3a60",
+    "teleop_control/src/teleop_control/umi_monitor.py": "95c165ac0da2bfeeedacf49363c90f10585b36689fb5c1d65f940489e5d262b9",
+    "umi_collection/vendor/galaxis/tools/galaxis_collection.py": "937f261cddfabff8afc6a7e4a72ffbe158362ffa39b1d799a7e523c36d78edf3"
+  },
+  "uploaded": false,
+  "deployed": false
+}

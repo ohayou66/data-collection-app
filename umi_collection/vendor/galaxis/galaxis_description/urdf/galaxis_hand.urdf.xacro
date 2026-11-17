@@ -37,9 +37,9 @@
        xyz=(x,-y,z), rpy=(-roll,pitch,-yaw). Both frames remain right-handed.
        A ray does not determine roll: retain roll=0, with +Y pointing hand-left.
        SDK-reference equivalence is user-specified, not independently calibrated. -->
-  <xacro:property name="mount_x" value="-0.05734"/>
-  <xacro:property name="mount_y" value="-0.0285"/>
-  <xacro:property name="mount_z" value="0.06362"/>
+  <xacro:property name="mount_x" value="-0.057343691323687"/>
+  <xacro:property name="mount_y" value="-0.028548886961648"/>
+  <xacro:property name="mount_z" value="0.063620999191499"/>
   <xacro:property name="mount_roll" value="0.0"/>
   <xacro:property name="mount_pitch" value="-0.7853981633974483"/>
   <xacro:property name="mount_yaw" value="0.0"/>
