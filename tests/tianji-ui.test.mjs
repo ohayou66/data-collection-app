@@ -117,7 +117,13 @@ void test('draft parameters reject empty, NaN and excessive values', () => {
   assert.equal(validTianjiParameters({ ...TIANJI_DEFAULTS, right_gripper_accel: 201 }), false);
   for (const side of ['left', 'right']) {
     for (const endpoint of ['open', 'closed']) {
-      assert.equal(validTianjiParameters({ ...TIANJI_DEFAULTS, [`${side}_gripper_${endpoint}_rad`]: 4 }), false);
+      const key = `${side}_gripper_${endpoint}_rad`;
+      for (const angle of [-2 * Math.PI, -4, 4, 2 * Math.PI]) {
+        assert.equal(validTianjiParameters({ ...TIANJI_DEFAULTS, [key]: angle }), true);
+      }
+      for (const angle of [-2 * Math.PI - 0.01, 2 * Math.PI + 0.01]) {
+        assert.equal(validTianjiParameters({ ...TIANJI_DEFAULTS, [key]: angle }), false);
+      }
     }
   }
   assert.equal(
