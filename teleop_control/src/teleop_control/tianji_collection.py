@@ -13,8 +13,9 @@ from types import SimpleNamespace
 
 from .collection_uploader import READY_MARKER
 from .robot_names import TIANJI_DISPLAY_NAME
-from .collection_gate import collection_available, collection_context
+from .collection_gate import collection_available, collection_context, local_directory_capture
 from .platform_auth import current_platform_username
+from .runtime_paths import teleop_data_root
 
 APP_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(APP_ROOT / "fusion_camera_stream"))
@@ -27,7 +28,7 @@ CAMERA_MAPPING = {"usb-1": "head_color", "usb-2": "right_color", "usb-4": "left_
 class TianjiCollection:
     def __init__(self, manager, output=None, episode_factory=Episode):
         self.manager = manager
-        self.output = Path(output or APP_ROOT / "teleop_control/runtime/tianji/episodes")
+        self.output = Path(output or teleop_data_root(APP_ROOT) / 'tianji')
         self.saved_output = self.output
         self.queue_root = None
         self.submitted = 0
@@ -58,7 +59,7 @@ class TianjiCollection:
     def enable_background_save(self, root=None):
         """Keep the current output/upload location while finalizing in another process."""
         from .tianji_local_queue import configure, configured_root, ensure_service
-        self.queue_root = Path(root or configured_root() or self.saved_output.parent / 'save-queue').resolve()
+        self.queue_root = Path(root or configured_root() or APP_ROOT / 'teleop_control/runtime/tianji/save-queue').resolve()
         configure(self.queue_root, self.saved_output)
         self.output = self.queue_root / 'pending'
         # This service owns only disk processing; it does not touch cameras or robots.
@@ -243,10 +244,11 @@ class TianjiCollection:
                     self.submitted += 1
                     self.phase = 'queued'
                 return
-            if episode.error:
+            local_finalized = local_directory_capture(info) and getattr(episode, "records_finalized", False)
+            if episode.error and not local_finalized:
                 raise RuntimeError(episode.error)
             metadata = json.loads((episode.directory / "meta_info.json").read_text())
-            if not metadata.get("complete") or not metadata.get("actions_recorded"):
+            if not local_finalized and (not metadata.get("complete") or not metadata.get("actions_recorded")):
                 raise RuntimeError("本轮数据不完整，已保留本地文件，不加入上传队列")
             metadata["author"] = info["author"]
             metadata["teleop_session_id"] = info["teleop_session_id"]
@@ -258,6 +260,8 @@ class TianjiCollection:
             dump(episode.directory / "meta_info.json", metadata)
             # Last write: the uploader must never see a partially written Episode.
             dump(episode.directory / READY_MARKER, info)
+            if episode.error or not metadata.get("complete"):
+                raise RuntimeError(episode.error or metadata.get("error") or "原始回合已保存，采集诊断未通过")
             with self.lock:
                 self.completed += 1
                 self.phase = "saved"
@@ -302,7 +306,7 @@ class TianjiCollection:
             if self.queue_root:
                 from .tianji_local_queue import queue_status
                 local_save = queue_status(self.queue_root, self.session)
-                self.completed = local_save['saved']
+                self.completed = local_save['session_saved']
             return {
                 **({'local_save': local_save} if local_save else {}),
                 "state": phase,
@@ -322,9 +326,15 @@ class TianjiCollection:
             }
 
     def close(self):
-        self.disarm("app_closed")
-        self.done.set()
-        if self.job:
-            self.job.join(timeout=25)
-            if self.job.is_alive():
+        with self.lock:
+            session, job = self.session, self.job
+            self.disarm("app_closed")
+            self.done.set()
+        if job:
+            job.join(timeout=25)
+            if job.is_alive():
                 raise RuntimeError("数据仍在保存，请稍后再返回配置")
+        with self.lock:
+            if self.session == session:
+                self.session = ""
+                self.error = ""

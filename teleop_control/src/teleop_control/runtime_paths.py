@@ -8,6 +8,10 @@ APP_ROOT = Path(__file__).resolve().parents[3]
 LEGACY_XR_SERVICE = "/opt/apps/roboticsservice/runService.sh"
 
 
+def teleop_data_root(app_root=APP_ROOT) -> Path:
+    return Path(os.environ.get('TELEOP_DATA_ROOT') or Path(app_root) / 'data').expanduser().resolve()
+
+
 def robot_runtime() -> Path | None:
     for path in (APP_ROOT / ".runtime/robot", APP_ROOT.parent / "runtime/robot"):
         if path.is_dir():

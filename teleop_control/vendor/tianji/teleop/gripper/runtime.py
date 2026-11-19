@@ -6,9 +6,19 @@ import threading
 import time
 from collections import deque
 from .damiao import Driver, SocketCAN, Simulation, TransportBusy
-from .config import bounded_position, travel_bounds
+from .config import bounded_position, feedback_within_travel, travel_bounds
 from .sampling import observed_hz
 from .motion import ramp
+
+
+def check_feedback_travel(side, motor, feedback):
+    if not feedback_within_travel(motor, feedback.position):
+        lo, hi = sorted((motor["open_rad"], motor["closed_rad"]))
+        raw = feedback.raw_position if feedback.raw_position is not None else feedback.position
+        raise RuntimeError(
+            f"{side}: feedback outside calibrated travel: {feedback.position:.6f} rad "
+            f"(motor raw {raw:.6f} rad), calibrated [{lo}, {hi}] rad"
+        )
 
 
 class Control:
@@ -100,9 +110,7 @@ class Control:
             raise RuntimeError(f"{side}: motor fault 0x{f.state:x}")
         if max(f.mos_c, f.rotor_c) >= m["max_temperature_c"]:
             raise RuntimeError(f"{side}: motor temperature limit")
-        lo, hi = sorted((m["open_rad"], m["closed_rad"]))
-        if not lo - 0.001 <= f.position <= hi + 0.001:
-            raise RuntimeError(f"{side}: feedback outside calibrated travel")
+        check_feedback_travel(side, m, f)
         t = sample["triggers"].get(side)
         if type(t) not in (int, float) or not math.isfinite(t) or not 0 <= t <= 1:
             self.driver.disable(side)
@@ -211,6 +219,8 @@ def refresh_disabled_feedback(driver, motors):
         if now >= deadline:
             raise RuntimeError("gripper: startup disabled feedback timeout: " + ", ".join(pending or motors))
         if not pending:
+            for side, motor in motors.items():
+                check_feedback_travel(side, motor, driver.feedback[side])
             return
         time.sleep(min(0.001, deadline - now))
 

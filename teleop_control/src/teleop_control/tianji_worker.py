@@ -31,7 +31,7 @@ from marvin_teleop.control import Controller  # noqa: E402
 from marvin_teleop.launcher import PicoLauncher, ensure_service  # noqa: E402
 from marvin_teleop.model import Models  # noqa: E402
 from marvin_teleop.preview import validate_preview  # noqa: E402
-from marvin_teleop.robot import Robot  # noqa: E402
+from marvin_teleop.robot import InitialHoldRejected, Robot  # noqa: E402
 from marvin_teleop.recovery import ZeroRecovery  # noqa: E402
 from marvin_teleop.xr_input import SDKInput  # noqa: E402
 
@@ -241,8 +241,13 @@ def main():
                         if action == "check":
                             if state != "idle":
                                 raise ValueError("请先停止当前控制")
+                            if robot is not None and not robot_ready:
+                                # Native SDK caches version compatibility only at connect.
+                                robot.close()
+                                robot = None
                             if robot is None:
                                 robot = RecordingRobot(config)
+                            robot_ready = False
                             robot.wait_ready()
                             robot_ready = True
                             if launcher is None:
@@ -324,6 +329,8 @@ def main():
                             raise ValueError("不支持的天机 Marvin M6控制指令")
                         emit({"reply": cmd.get("id"), "ok": True, "state": state})
                     except Exception as exc:
+                        if isinstance(exc, InitialHoldRejected):
+                            robot_ready = False
                         if action in ("stop", "close"):
                             state = "error"
                         if action in ("start", "move"):

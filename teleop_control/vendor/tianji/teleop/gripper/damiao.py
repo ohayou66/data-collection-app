@@ -1,7 +1,7 @@
 """DM-J4310-2EC common protocol: MIT/PVT control, radians, 50 us timeout ticks."""
 
 from dataclasses import asdict, dataclass
-from .config import bounded_position, travel_bounds
+from .config import bounded_position, position_offset, travel_bounds
 from .compatibility import current_limit
 from .sampling import FeedbackBuffer
 import math
@@ -55,6 +55,7 @@ class Feedback:
     state: int
     received: float
     sequence: int = 0
+    raw_position: float | None = None
 
     def status(self):
         return asdict(self)
@@ -122,6 +123,7 @@ class Driver:
         self.current_limits = {}
         self.current_limit_reports = {}
         self.last_position_commands = {}
+        self.position_offsets = {}
         self.received_feedback = FeedbackBuffer(motors)
 
     def drain_feedback(self):
@@ -183,6 +185,7 @@ class Driver:
     def preflight(self):
         self.current_limits.clear()
         self.current_limit_reports.clear()
+        self.position_offsets.clear()
         # 插上即用：清除陈旧故障，控制模式/硬件看门狗与配置不符时易失写入（close 恢复）。
         # 不写零点/Flash；PMAX/VMAX/TMAX 与位置保持只读。
         modes, watchdogs = {}, {}
@@ -207,8 +210,6 @@ class Driver:
             )
             if not all(math.isfinite(x) and x > 0 for x in self.limits[side]):
                 raise ValueError(f"{side}: invalid PMAX/VMAX/TMAX")
-            if max(abs(m["open_rad"]), abs(m["closed_rad"])) >= self.limits[side][0]:
-                raise ValueError(f"{side}: calibrated travel exceeds PMAX")
             if "max_current_a" in m:
                 report = self.read_current_limit(side)
                 self.current_limit_reports[side] = report
@@ -246,16 +247,22 @@ class Driver:
                     raise RuntimeError(f"{side}: watchdog write not confirmed")
         for side in self.motors:
             p = self.register(side, 0x50, "f")
-            self.check_position(side, p)
-            self.feedback[side].position = p
+            offset = self.check_position(side, p)
+            self.position_offsets[side] = offset
+            self.feedback[side].raw_position = p
+            self.feedback[side].position = p - offset
 
     def check_position(self, side, p):
         m = self.motors[side]
-        lo, hi = sorted((m["open_rad"], m["closed_rad"]))
-        if not math.isfinite(p) or not lo - 0.001 <= p <= hi + 0.001:
+        offset = position_offset(m, p)
+        if offset is None:
+            lo, hi = sorted((m["open_rad"], m["closed_rad"]))
             raise RuntimeError(
                 f"{side}: motor position {p} outside calibrated travel [{lo}, {hi}]"
             )
+        if max(abs(m[key] + offset) for key in ("open_rad", "closed_rad")) >= self.limits[side][0]:
+            raise RuntimeError(f"{side}: calibrated travel on the motor's reported branch exceeds PMAX")
+        return offset
 
     def poll(self):
         for _ in range(256):
@@ -269,20 +276,33 @@ class Driver:
                         continue  # Register echoes are not motor status frames.
                     f = decode(data, m["motor_id"], self.limits[side], time.monotonic())
                     if f is not None:
+                        raw = f.position
+                        offset = self.position_offsets.get(side)
+                        f.raw_position = raw
+                        if offset is not None:
+                            f.position = raw - offset
                         self.feedback[side] = f
                         self.received_feedback.record(side, f)
+                        if offset is not None:
+                            observed_offset = position_offset(m, raw)
+                            if observed_offset is not None and observed_offset != offset:
+                                raise RuntimeError(
+                                    f"{side}: motor position branch changed (raw {raw:.6f} rad). "
+                                    "请停止控制并重新检查夹爪位置"
+                                )
         raise RuntimeError("gripper: CAN receive backlog")
 
     def send_mit(self, side, p, kp, kd):
         """MIT position frame on the configured mode's CAN ID (mode 1 keeps the plain ID)."""
         m = self.motors[side]
-        p = bounded_position(m, p)
+        offset = self.position_offsets.get(side, 0.0)
+        p = bounded_position(m, p) + offset
         payload = bytearray(mit_command(p, self.limits[side], kp, kd))
         # Quantize inward, including for negative/reversed endpoint coordinates.
         lo, hi = travel_bounds(m)
         pmax = self.limits[side][0]
-        low_code = math.ceil((lo + pmax) * 65535 / (2 * pmax))
-        high_code = math.floor((hi + pmax) * 65535 / (2 * pmax))
+        low_code = math.ceil((lo + offset + pmax) * 65535 / (2 * pmax))
+        high_code = math.floor((hi + offset + pmax) * 65535 / (2 * pmax))
         if low_code > high_code:
             raise ValueError("gripper: travel smaller than protocol resolution")
         code = max(low_code, min(high_code, int.from_bytes(payload[:2], "big")))
@@ -297,6 +317,7 @@ class Driver:
     def send(self, side, p):
         """Force-position (mode 4) frame with driver-enforced speed/current limits."""
         m = self.motors[side]
+        offset = self.position_offsets.get(side, 0.0)
         p = bounded_position(m, p)
         # Stay inside the inset range even after float32 wire rounding.
         lo, hi = travel_bounds(m)
@@ -304,7 +325,7 @@ class Driver:
         if "max_current_a" in m and side not in self.current_limits:
             raise RuntimeError(f"{side}: current limit preflight required")
         current = self.current_limits.get(side, m["current_fraction"])
-        payload=command(p,m["speed_rad_s"],current);can_id=0x300+m["motor_id"]
+        payload=command(p+offset,m["speed_rad_s"],current);can_id=0x300+m["motor_id"]
         self.bus.send(can_id,payload)
         wire_position,wire_speed,wire_current=struct.unpack('<fHH',payload)
         self.last_position_commands[side]=dict(accepted_at=time.monotonic(),

@@ -28,10 +28,10 @@ export const TIANJI_DEFAULTS: TianjiParameters = {
   right_gripper_speed: 10,
   left_gripper_accel: 200,
   right_gripper_accel: 200,
-  left_gripper_open_rad: -0.62,
-  left_gripper_closed_rad: 0.9,
-  right_gripper_open_rad: 0.18,
-  right_gripper_closed_rad: 1.7,
+  left_gripper_open_rad: 1.71,
+  left_gripper_closed_rad: 3.23,
+  right_gripper_open_rad: 3.28,
+  right_gripper_closed_rad: 4.8,
 };
 export const TIANJI_FIELDS: {
   key: keyof TianjiParameters;
@@ -122,6 +122,7 @@ export interface TianjiStatus {
     error: string;
     completed: number;
     local_save?: {
+      scope: 'session' | 'all';
       pending: number;
       processing: number;
       failed: number;

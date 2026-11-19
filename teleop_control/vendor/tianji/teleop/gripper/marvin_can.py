@@ -10,6 +10,7 @@ import math
 import struct
 import time
 from collections import deque
+from .config import position_offset
 from .damiao import Driver, TransportBusy
 from .compatibility import voltage_telemetry
 
@@ -238,11 +239,14 @@ def inspect(robot, config):
             if not m.get("watchdog_ticks") and not 1000 <= p["timeout_ticks_50us"] <= 6000:
                 issues.append("TIMEOUT必须为1000..6000（50..300ms）或设置watchdog_ticks由程序写入")
             lo, hi = sorted((m["open_rad"], m["closed_rad"]))
-            if not math.isfinite(p["position_rad"]) or not lo - 0.001 <= p["position_rad"] <= hi + 0.001:
+            offset = position_offset(m, p["position_rad"])
+            if offset is None:
                 issues.append("实际位置超出配置行程；需要确认零点与开合角度")
+            else:
+                p["calibrated_position_rad"] = p["position_rad"] - offset
             if not all(math.isfinite(p[k]) and p[k] > 0 for k in ("pmax", "vmax", "tmax")):
                 issues.append("PMAX/VMAX/TMAX量程无效")
-            elif max(abs(lo), abs(hi)) >= p["pmax"]:
+            elif offset is not None and max(abs(lo + offset), abs(hi + offset)) >= p["pmax"]:
                 issues.append("配置行程超出PMAX")
             try:
                 report["voltage_telemetry"] = voltage_telemetry(p["bus_voltage"])
@@ -254,8 +258,10 @@ def inspect(robot, config):
                 issues.append("末端与重复保持命令/看门狗尚未完成现场验证")
             if m.get("commissioned") is not True:
                 issues.append("本侧行程与夹持电流尚未完成标定")
-            if max(abs(lo), abs(hi)) >= math.pi - 0.02:
-                report.setdefault("warnings", []).append("标定靠近或超出上电单圈边界；断电后请确认同一开度的位置反馈一致")
+            if offset:
+                report.setdefault("warnings", []).append("角度使用与标定相差一整圈的表示；启动时会用失能反馈复核")
+            elif max(abs(lo), abs(hi)) >= math.pi - 0.02:
+                report.setdefault("warnings", []).append("标定靠近或超出上电单圈边界")
             if "max_current_a" in m:
                 try:
                     p.update(d.read_current_limit(s))

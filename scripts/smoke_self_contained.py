@@ -352,7 +352,7 @@ for command in [['docker','compose','version'],['adb','version'],['dockerd','--v
 env={**os.environ,'QT_QPA_PLATFORM':'offscreen','QSG_RHI_BACKEND':'opengl','QSG_RENDER_LOOP':'basic','QT_SCALE_FACTOR':'1','LIBGL_ALWAYS_SOFTWARE':'1'}
 log=Path('/tmp/xiaokai-ui-test.log')
 with log.open('w') as output:
-    app=subprocess.Popen(['/usr/bin/xiaokai-lab-data-collection','--software-rendering'],env=env,stdout=output,stderr=subprocess.STDOUT)
+    app=subprocess.Popen(['/usr/bin/xiaokai-lab-data-collection','--software-rendering','--storage-mode','local-platform'],env=env,stdout=output,stderr=subprocess.STDOUT)
 try:
     until=time.monotonic()+70
     while 'NATIVE_SERVICE_READY' not in log.read_text():

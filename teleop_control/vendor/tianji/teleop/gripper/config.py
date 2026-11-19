@@ -4,6 +4,8 @@ import json
 import math
 from pathlib import Path
 
+FEEDBACK_TOLERANCE_RAD = 0.001
+
 
 def load(path, live=False):
     c = json.loads(Path(path).read_text())
@@ -112,12 +114,32 @@ def load(path, live=False):
 def travel_bounds(motor):
     """Inset command range; measured calibration endpoints remain unchanged."""
     lo, hi = sorted((motor["open_rad"], motor["closed_rad"]))
-    if hi - lo + 2 * 0.001 >= math.tau:
+    if hi - lo + 2 * FEEDBACK_TOLERANCE_RAD >= math.tau:
         raise ValueError("gripper: travel including feedback tolerance must be shorter than one revolution")
     margin = motor.get("travel_margin_rad", 0.02)
     if not math.isfinite(margin) or margin < 0.002 or 2 * margin >= hi - lo:
         raise ValueError("gripper: travel margin must be >=0.002 and less than half travel")
     return lo + margin, hi - margin
+
+
+def feedback_within_travel(motor, position):
+    lo, hi = sorted((motor["open_rad"], motor["closed_rad"]))
+    tolerance = FEEDBACK_TOLERANCE_RAD
+    return lo - tolerance <= position <= hi + tolerance
+
+
+def position_offset(motor, raw_position):
+    """Return raw minus calibrated angle for a usable power-on branch."""
+    if feedback_within_travel(motor, raw_position):
+        return 0.0
+    lo, hi = sorted((motor["open_rad"], motor["closed_rad"]))
+    # A wrapped power-on reading must fit a full, continuous single-turn
+    # travel. Reject a partial overlap or unexpected multi-turn reading.
+    for offset in (-math.tau, math.tau):
+        if (-math.pi <= lo + offset <= hi + offset <= math.pi
+                and feedback_within_travel(motor, raw_position - offset)):
+            return offset
+    return None
 
 
 def bounded_position(motor, position):

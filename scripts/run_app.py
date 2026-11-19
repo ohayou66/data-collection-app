@@ -18,7 +18,8 @@ import webbrowser
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from generate_runtime_config import ROOT, platform_urls, read_env
+from generate_runtime_config import ROOT, read_env
+from recording_mode import launch_values
 
 sys.path.insert(0, str(ROOT / "teleop_control" / "src"))
 from teleop_control.platform_auth import PlatformTokenStore  # noqa: E402
@@ -68,6 +69,8 @@ def clear_previous_app_login(values: dict[str, str]) -> None:
     configured = values.get("PLATFORM_TOKEN_FILE", "").strip()
     store = PlatformTokenStore(configured or None)
     store.clear()
+    if values.get('DATA_COLLECTION_STORAGE_MODE') == 'local-platform':
+        return
     # Local destinations have their own token files. Clear only their exact
     # session filenames, preserving password preferences and keyring entries.
     for path in store.path.parent.glob('platform-local-*.json'):
@@ -122,10 +125,15 @@ def main() -> int:
     parser.add_argument("--mock", action="store_true", help="start without robot hardware")
     parser.add_argument("--no-browser", action="store_true", help="do not open the UI automatically")
     parser.add_argument("--backend-only", action="store_true", help="run service for native Qt interface")
+    parser.add_argument('--storage-mode', choices=('raw-only', 'local-platform'), default='raw-only')
     args = parser.parse_args()
 
-    values = read_env(ROOT / ".env")
-    values.update(platform_urls(values))
+    settings = read_env(ROOT / ".env")
+    values = launch_values(settings, args.storage_mode)
+    if args.storage_mode == 'local-platform' and settings.get('PLATFORM_API_URL', values['PLATFORM_API_URL']).rstrip('/') != values['PLATFORM_API_URL']:
+        from teleop_control.upload_targets import local_token_path
+        default_store = PlatformTokenStore(settings.get('PLATFORM_TOKEN_FILE') or None)
+        values['PLATFORM_TOKEN_FILE'] = str(local_token_path(default_store.path, values['PLATFORM_API_URL']))
     env = os.environ.copy()
     env.update(values)
     configure_adb_environment(env)

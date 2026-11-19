@@ -1,5 +1,6 @@
 """Read-only view of durable episodes, scoped to their original destination."""
 import json
+import yaml
 from pathlib import Path
 
 
@@ -47,7 +48,7 @@ def queue_summary(data_root, destination=None, *, raw_only=False):
             reasons.append(f"无法读取采集数据 {folder.name}：{exc.strerror or str(exc)}；请检查目录权限或磁盘状态")
             continue
         if not raw_only and destination is not None and target != destination:
-            if not receipt and (processing or complete):
+            if not receipt and (processing or complete) and destination.get('storage_mode') != 'local_raw':
                 result['other_pending'] += 1
             continue
         if processing:
@@ -92,3 +93,74 @@ def queue_summary(data_root, destination=None, *, raw_only=False):
         last['message'] = '上次异常中断：' + last['folder'] + ' · ' + reason + '；已保留可用数据，请复核该段'
     result['message'] = '；'.join(dict.fromkeys(reasons))
     return result
+
+
+def completed_mcap(payload_dir):
+    try:
+        metadata = yaml.safe_load((payload_dir / "metadata.yaml").read_text(encoding="utf-8"))
+        names = metadata["rosbag2_bagfile_information"]["relative_file_paths"]
+    except (yaml.YAMLError, KeyError, TypeError) as exc:
+        raise ValueError("UMI 回合的 metadata.yaml 无效") from exc
+    # The platform's rosbag ingest consumes one MCAP per Episode. Our
+    # recorder does not split bags; reject unexpected layouts explicitly.
+    if not isinstance(names, list) or len(names) != 1 or not isinstance(names[0], str) or Path(names[0]).name != names[0]:
+        raise ValueError("rosbag Episode must contain one complete MCAP file")
+    mcap = payload_dir / names[0]
+    if mcap.suffix.lower() != ".mcap" or not mcap.is_file() or mcap.is_symlink():
+        raise ValueError("rosbag metadata references a missing MCAP file")
+    with mcap.open("rb") as handle:
+        magic = b"\x89MCAP0\r\n"
+        if handle.read(8) != magic or mcap.stat().st_size < 16:
+            raise ValueError("invalid MCAP header")
+        handle.seek(-8, 2)
+        if handle.read(8) != magic:
+            raise ValueError("MCAP has not been finalized")
+    return mcap
+
+
+def local_registration_info(folder, destination):
+    """Publish the handoff only for a finalized UMI round opted in at capture start."""
+    from .collection_uploader import READY_MARKER
+    from .umi_uploader import UmiRosbagUploader
+
+    if UmiRosbagUploader._processing(folder):
+        return None
+    meta = read_json(folder / 'meta.json')
+    if meta.get('upload_destination') != destination or not meta.get('author'):
+        return None
+    info = {'author': meta['author'], 'upload_destination': destination, 'source': 'umi'}
+    marker = folder / READY_MARKER
+    if marker.is_symlink():
+        raise ValueError('UMI 完成标记不能是符号链接')
+    if marker.exists():
+        existing = read_json(marker)
+        if any(existing.get(key) != value for key, value in info.items()):
+            raise ValueError('UMI 完成标记与录制账号或目标不一致')
+        return info
+    # meta.json also exists during offline MP4 processing. The finalizer
+    # publishes ready only after verifying the output and cleaning staging files.
+    media = folder / 'media' if (folder / 'media/video-manifest.json').is_file() else folder
+    manifest_path = media / 'video-manifest.json'
+    if manifest_path.is_file() or meta.get('recording_format') == 'umi-mp4-v1':
+        manifest = read_json(manifest_path)
+        cameras = manifest.get('cameras') or []
+        if (manifest.get('format') != 'umi-mp4-v1' or manifest.get('state') != 'complete'
+                or not cameras or manifest.get('signals', {}).get('file') != 'signals.mcap'):
+            return None
+        for camera in cameras:
+            name = camera.get('file', '')
+            if Path(name).name != name or not name.endswith('.mp4') or not (media/name).is_file():
+                return None
+    elif (meta.get('video_output') == 'mp4' and meta.get('recording_format') != 'umi-mcap-h264-v1'
+          and read_json(folder / 'raw-data-status.json').get('state') != 'ready'):
+        # MJPEG metadata can briefly precede creation of its MP4-pending flag.
+        return None
+    if not (media/'metadata.yaml').is_file():
+        return None
+    mcap = completed_mcap(media)
+    if manifest_path.is_file() and mcap.name != 'signals.mcap':
+        raise ValueError("UMI 视频清单与 MCAP 文件不一致")
+    temporary = marker.with_suffix('.tmp')
+    temporary.write_text(json.dumps(info, ensure_ascii=False))
+    temporary.replace(marker)
+    return info

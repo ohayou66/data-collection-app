@@ -158,6 +158,8 @@ class CollectionUploader:
         self.discover_completed = discover_completed
         self.client = client or platform_api_client(timeout=None)
         self._owns_client = client is None
+        self.local_destination = None
+        self.capture_root = None
         self.targets = targets
         self._base_client = self.client
         self._target_clients = {}
@@ -183,6 +185,7 @@ class CollectionUploader:
             rows = list(self._episode_status.values())
         return {
             "pending": sum(r["state"] in {"pending", "uploading", "failed"} for r in rows),
+            **({"registered": sum(r["state"] == "registered" for r in rows)} if self.local_destination else {}),
             "uploaded": sum(r["state"] == "uploaded" for r in rows),
             "uploading": sum(r["state"] == "uploading" for r in rows),
             "failed": sum(r["state"] == "failed" for r in rows),
@@ -246,6 +249,9 @@ class CollectionUploader:
     def _scan(self) -> None:
         if not self.output_root.is_dir():
             return
+        if self.local_destination is not None:
+            self._register_local_episodes()
+            return
         batches: dict[str, dict] = {}
         completed = []
         episode_dirs = {marker.parent for marker in self.output_root.glob(f"*/{READY_MARKER}")}
@@ -268,6 +274,11 @@ class CollectionUploader:
                 continue
             try:
                 info = self._ready_info(episode_dir)
+                destination = info.get('upload_destination')
+                if destination == {'kind': 'raw-only'}:
+                    continue
+                if isinstance(destination, dict) and (destination.get('storage_mode') == 'local_raw' or destination.get('format') == 'lerobot'):
+                    continue
                 eligible = self._select_destination(info)
             except Exception as exc:
                 self._set_status(episode_dir, 'failed', str(exc))
@@ -340,6 +351,66 @@ class CollectionUploader:
                 )
             else:
                 self._sync_batch(info, "ready", episode_total=episode_total)
+
+    def _register_local_episodes(self):
+        # The appliance reads the raw directory through its read-only Docker mount.
+        umi = self.output_root == self.capture_root / "umi/rosbags"
+        pattern = "*/*/meta.json" if umi else f"*/{READY_MARKER}"
+        for marker in sorted(self.output_root.glob(pattern)):
+            if self._stop.is_set():
+                return
+            directory = marker.parent
+            try:
+                if directory.name.startswith(".") or marker.is_symlink():
+                    continue
+                relative = directory.relative_to(self.capture_root)
+                if umi:
+                    expected = len(relative.parts) == 4 and relative.parts[:2] == ("umi", "rosbags")
+                else:
+                    expected = len(relative.parts) == 2 and relative.parts[0] in {"tianji", "kuavo", "g2"}
+                if (not expected or any(part.startswith(".") for part in relative.parts)
+                        or directory.resolve() != directory or "\\" in relative.as_posix()):
+                    raise ValueError("回合必须位于本机 data 的设备目录内")
+                if umi:
+                    from .umi_queue import local_registration_info
+                    info = local_registration_info(directory, self.local_destination)
+                else:
+                    info = self._ready_info(directory)
+                if not info or info.get("upload_destination") != self.local_destination:
+                    continue
+                if (directory / UPLOADED_MARKER).is_file():
+                    self._set_status(directory, "registered")
+                    continue
+                if not info.get("author") or not self._select_destination(info):
+                    self._set_status(directory, "pending", "等待采集账号登录后提交本机目录")
+                    continue
+                episode_id = self._episode_id(directory)
+                self._set_status(directory, "uploading")
+                payload = {"id": str(episode_id), "directory": relative.as_posix()}
+                if umi:
+                    payload["source"] = "umi"
+                response = self.client.post(
+                    self.api_url + "/uploads/local-episodes",
+                    json=payload,
+                    extensions={"expected_platform_username": info["author"]},
+                )
+                if response.is_error:
+                    try:
+                        detail = response.json().get("detail")
+                    except (ValueError, AttributeError):
+                        detail = None
+                    if detail:
+                        raise ValueError(f"平台登记失败（HTTP {response.status_code}）：{detail}")
+                response.raise_for_status()
+                result = response.json()
+                if (response.status_code != 201 or result.get("id") != str(episode_id)
+                        or result.get("status") != "registered" or result.get("storage_mode") != "local_raw"):
+                    raise ValueError("平台未确认该回合已登记")
+                self._write_receipt(directory, episode_id, registration=result)
+                self._set_status(directory, "registered")
+            except (OSError, ValueError, RuntimeError, httpx.HTTPError, AttributeError) as exc:
+                self._set_status(directory, "failed", str(exc))
+                logger.warning("本机目录 %s 登记失败: %s", directory, exc)
 
     def _ready_info(self, episode_dir: Path) -> dict[str, object]:
         marker = episode_dir / READY_MARKER
@@ -421,7 +492,7 @@ class CollectionUploader:
     def _episode_id(self, episode_dir: Path) -> uuid.UUID:
         return uuid.uuid5(UPLOAD_NAMESPACE, str(episode_dir.resolve()))
 
-    def _write_receipt(self, episode_dir: Path, episode_id: uuid.UUID) -> None:
+    def _write_receipt(self, episode_dir: Path, episode_id: uuid.UUID, *, registration=None) -> None:
         receipt = episode_dir / UPLOADED_MARKER
         temporary = receipt.with_suffix(".tmp")
         temporary.write_text(
@@ -430,7 +501,9 @@ class CollectionUploader:
                     "episode_id": str(episode_id),
                     "api_url": self.api_url,
                     "upload_destination": self._destination,
-                    "uploaded_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                    **({"status": "registered", "storage_mode": registration["storage_mode"]}
+                       if registration else {}),
+                    ("registered_at" if registration else "uploaded_at"): datetime.now(UTC).isoformat().replace("+00:00", "Z"),
                 },
                 indent=2,
             )

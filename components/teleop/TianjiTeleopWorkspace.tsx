@@ -188,6 +188,12 @@ export function TianjiTeleopWorkspace({
   const running = state?.state === 'running',
     moving = state?.state === 'moving';
   const collection = state?.collection;
+  const localSave = collection?.local_save;
+  const errors = [...new Set([
+    error, state?.error, saveFailure?.message, collection?.error,
+    localSave?.scope === 'session' && localSave.error,
+    localSave?.worker_online === false && '后台保存服务未就绪，已排队的数据保留',
+  ].filter((message): message is string => typeof message === 'string' && message.length > 0))];
   const collecting = Boolean(collection?.recording);
   const collectionBusy = Boolean(collection?.busy);
   const cameraSettingsBusy = Boolean(state?.camera_settings_busy) || Object.values(cameraBusy).some(Boolean);
@@ -578,11 +584,11 @@ export function TianjiTeleopWorkspace({
             {state.recovery.detail}
           </div>
         ) : null}
-        {error || state?.error || saveFailure ? (
-          <div className="inline-alert teleop-panel-alert" role="alert">
-            {error || state?.error || saveFailure?.message}
+        {errors.map(message => (
+          <div className="inline-alert teleop-panel-alert" role="alert" key={message}>
+            {message}
           </div>
-        ) : null}
+        ))}
         <div className="teleop-control-footer">
           <div className="teleop-control-actions">
             <div className="tianji-collection-summary" role="status" aria-live="polite" aria-atomic="true">
@@ -629,16 +635,6 @@ export function TianjiTeleopWorkspace({
             )}
           </div>
         </div>
-        {collection?.error ? (
-          <div className="inline-alert teleop-panel-alert" role="alert">
-            {collection.error}
-          </div>
-        ) : null}
-        {collection?.local_save && (!collection.local_save.worker_online || collection.local_save.error) && (
-          <div className="inline-alert teleop-panel-alert" role="alert">
-            {collection.local_save.error || '后台保存服务未就绪，已排队的数据保留'}
-          </div>
-        )}
         {collection?.upload.error ? (
           <div className="tianji-hint" role="status">
             上传待重试：{collection.upload.error}

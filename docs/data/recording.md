@@ -2,45 +2,23 @@
 
 [文档目录](../README.md) · [项目首页](../../README.md)
 
-命令均在仓库根目录执行。以下登录与上传说明适用于 `platform` 模式；`DATA_COLLECTION_STORAGE_MODE=raw-only` 使用本地保存流程，不要求平台登录、不上传数据。实际保存位置以 App 当前配置为准。
+## 遥操作与 UMI 数据保存
 
-天机连续录制、后台保存队列、单臂筛选与失败回合规则见[天机数据说明](tianji-recording.md)；UMI 就绪和文件格式见本页后半部分。
+从源码启动 App 时，采集服务会在本仓库内自动创建原始回合目录。
 
-## 数据流与本地目录
+| 设备 | 目录 |
+| --- | --- |
+| 天机 Marvin M6 | `data/tianji/` |
+| 乐聚 KUAVO 5-W | `data/kuavo/` |
+| 智元 G2 | `data/g2/` |
+| UMI | `data/umi/rosbags/<任务>/<回合>/` |
 
-```text
-Pico / XR / G2 / USB 相机 / 编码器
-              │
-              ▼
-      本机采集服务（127.0.0.1）
-              │  完成后后台上传
-              ▼
-       PLATFORM_API_URL
-              │
-              ▼
-       平台 Episode 数据列表
-```
-
-- G2 本地目录：默认 `~/agibot_episodes/dual_arm`
-- 天机本地目录：`teleop_control/runtime/tianji/episodes`
-- 乐聚采集目录：`teleop_control/runtime/kuavo/collection-episodes`；`episodes` 为会话过程日志
-- UMI 本地目录：默认 `~/galaxis_data/rosbags/<任务>/<回合>`
-
-## 平台登录与上传
-
-- 上传成功会在 Episode 目录写入 `.data-platform-uploaded.json`，避免重复上传。
-- 登录必须由平台验证账号密码；平台不可连接时停留登录页，不允许离线进入。已登录后平台断线仍可操作设备，不弹采集连接提示，平台离线时不开始新的数据保存。后台每 2 秒检查平台会话，最长 10 秒后过期失效。已经开始的回合仍正常收尾，已有文件保留，恢复平台并登录原采集账号后自动重试上传。
-- `.env` 中 `PLATFORM_API_URL` 配置实际的平台 API 地址；`127.0.0.1:8000` 仅连接本机平台。使用云端时同时填写 `PLATFORM_WEB_URL`。平台恢复后可以正常登录。
-
-切换平台时用同一条命令同时更新两个地址，然后重启 App：
-
-```bash
-python3 scripts/configure_platform.py --api-url https://api.example.com --web-url https://platform.example.com
-```
-
-请替换为实际云端地址（允许 API 和网页使用不同域名或端口）。命令会一次性写入
-两项配置并保留其他设置；启动和打包也会校验地址，避免云端 API 搭配本机网页。
-切回本地时分别填写 `http://127.0.0.1:8000`、`http://127.0.0.1:5173`。
+- 在登录页的「启动模式」下拉框选择本次采集的数据保存方式。
+- **默认（仅保存原始数据）**。点击「进入采集」，无需平台或账号。结束回合后原始文件保存在对应设备目录，以后选择上传模式也不会补传这些回合。
+- **上传本机平台**。先启动本机数据平台 Docker，并在 App 内登录。原始文件写完后，App 最后写入 `.data-platform-ready.json`，用采集账号的 token 向 `POST /uploads/local-episodes` 提交固定 UUID 和相对于 `data/` 的回合目录。HTTP 201 表示已提交平台。网络中断时 App 保留原目录并重试登记。
+- 平台通过只读挂载读取原始数据，负责 LeRobot 转换、时间轴和缺帧检查、可视化缓存。当前转换器支持天机 schema 2（弧度）与 UMI 的 MCAP/MP4 回合。G2、乐聚可以登记，转换支持取决于平台。转换进度、失败重试、源文件下载和删除 LeRobot 后的重新转换均在平台「格式转换」页操作。保留已登记目录的原位置和文件内容，平台后续会再次读取它们。
+- 后端无界面启动时也默认仅本地保存。使用 `./start-app.sh --backend-only --storage-mode local-platform` 可显式开启本机上传。平台默认使用 `http://127.0.0.1:8000`，可通过 `UMI_LOCAL_API_URL` 和 `UMI_LOCAL_WEB_URL` 设置其他本机端口。
+- UMI 在录制开始时固定采集账号与启动模式。采集和本地视频整理完成后，上传模式提交 `source: "umi"`、固定 UUID 和 `umi/rosbags/<任务>/<回合>`。平台读取原生 `meta.json` 和回合文件，负责 LeRobot 转换。默认模式、放弃的回合、整理中的回合均不会被自动登记。以前保存在 `~/galaxis_data/rosbags/` 等位置的录制保留在原处。
 
 ## UMI 录制就绪
 
@@ -80,7 +58,7 @@ MCAP 转换，逐帧校验视频并核对所有非图像消息，再发布完成
 `<回合>_0.mcap`、`metadata.yaml` 和 `meta.json`；图像、位姿、夹爪、标定、
 按键和时间戳按现有录制话题保存在 MCAP 内。双臂/单臂硬件配置继续决定录制话题。
 
-对于上述旧 MCAP 布局，录制器停止并刷盘、验证回合元数据后，原子写入 `meta.json`。上传器只扫描
+历史直传流程中，录制器停止并刷盘、验证回合元数据后，原子写入 `meta.json`。上传器只扫描
 已收尾的回合，并检查 MCAP 首尾标记及元数据引用。平台登记采用
 `source=rosbag`、`format=rosbag`，存储键为 `raw/mcap/metadata/meta`，由平台
 现有 rosbag 转换任务生成预览、曲线和可导出的数据。原始数据下载包含上述三个文件。

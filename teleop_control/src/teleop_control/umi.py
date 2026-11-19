@@ -1748,6 +1748,10 @@ class UmiManager:
             self._started_at = datetime.now(UTC)
             log = (self.runtime_dir / "umi-collection.log").open("w", encoding="utf-8")
             env = os.environ.copy()
+            if getattr(getattr(self, 'upload_targets', None), 'raw_only', False) is True:
+                env['DATA_COLLECTION_STORAGE_MODE'] = 'raw-only'
+            if getattr(self, 'collection_gate_path', None):
+                env['DATA_COLLECTION_GATE_FILE'] = str(self.collection_gate_path)
             env["DATA_MOUNT_PATH"] = str(self.data_root)
             command = [
                 self.python,
@@ -1876,8 +1880,16 @@ class UmiManager:
     def upload_queue(self):
         from .umi_queue import queue_summary
         targets = getattr(self, 'upload_targets', None)
-        return queue_summary(self.data_root, targets.snapshot() if targets else None,
-                             raw_only=getattr(targets, 'raw_only', False))
+        summary = queue_summary(self.data_root, targets.snapshot() if targets else None,
+                                raw_only=getattr(targets, 'raw_only', False))
+        registration = getattr(self, 'directory_registration', None)
+        if registration is not None:
+            state = registration.status()
+            summary['registered'] = summary['uploaded']
+            summary['failed'] = state['failed']
+            if state['error']:
+                summary['message'] = state['error']
+        return summary
 
     def processing_counts(self) -> tuple[int, int]:
         pending = list((self.data_root / "rosbags").glob("*/*/.mp4-pending.json"))

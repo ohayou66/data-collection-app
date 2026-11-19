@@ -18,8 +18,14 @@ ApplicationWindow {
         if(s.page==="teleop" && s.teleopStep===2){
             let status=s.robot==="kuavo-5w"?s.kuavo:s.robot==="tianji"?s.tianji:s.g2
             let collection=status.collection||{}
-            if(s.robot!=="tianji" || s.tianjiStatusFresh)
+            if(s.robot!=="tianji" || s.tianjiStatusFresh) {
                 messages.push(status.error,status.camera_error,collection.error,(collection.upload||{}).error)
+                const save = collection.local_save
+                if(s.robot==="tianji" && save) {
+                    if(save.scope==="session") messages.push(save.error)
+                    if(save.worker_online===false) messages.push("后台保存服务未就绪，已排队的数据保留")
+                }
+            }
             if(s.robot==="tianji")messages.push(s.cameraApplyError)
         }
         if(s.page==="umi")messages.push(s.umi.error)
@@ -30,8 +36,8 @@ ApplicationWindow {
     property bool recordKeyBlocked: usageGuide.previewVisible || umiPanel.recordDialogOpen
     onClosing: close=>{close.accepted=s.closing;if(!close.accepted)backend.closeRequested()}
     Backdrop {anchors.fill: parent;dark: Theme.dark;login: !s.authenticated}
-    Startup {objectName: "startupPage";anchors.fill: parent;visible: !s.ready}
-    Login {objectName: "loginPage";anchors.fill: parent;visible: s.ready && !s.authenticated}
+    Startup {objectName: "startupPage";anchors.fill: parent;visible: !s.ready && !backend.rawOnly && !backend.localPlatform}
+    Login {objectName: "loginPage";anchors.fill: parent;visible: !s.authenticated && (s.ready || backend.rawOnly || backend.localPlatform)}
     Item {
         objectName: "collectionPage"
         anchors.fill: parent;anchors.leftMargin: app.narrow?10:14;anchors.rightMargin: app.narrow?10:14;anchors.topMargin: 10;anchors.bottomMargin: 10
@@ -96,7 +102,7 @@ ApplicationWindow {
                     Txt {width: parent.width;text: s.username;font.pixelSize: 12;font.weight: Font.Bold;height: 17}
                     Txt {text: "v2.0.0";font.pixelSize: 11;color: Theme.inkSoft;height: 16}
                 }
-                Btn {anchors.right: parent.right;anchors.rightMargin: 5;y: 11;width: 28;height: 28;glyph: "LogOut";visible: !backend.rawOnly;ghost: true;enabled: !s.busy;onClicked: backend.logout()}
+                Btn {anchors.right: parent.right;anchors.rightMargin: 5;y: 11;width: 28;height: 28;glyph: "LogOut";Accessible.name: "返回登录页";ghost: true;enabled: !s.busy;onClicked: backend.logout()}
             }
         }
         WheelScroll {
@@ -122,11 +128,19 @@ ApplicationWindow {
                 }
                 Stepper {objectName: "pageStepper";visible: s.page!=="ego";width: parent.width;titles: s.page==="umi"?["选择配置","检查硬件","采集监控"]:["选择配置","遥操作采集"];step: s.page==="umi"?s.umiStep:s.teleopStep;returnVisible: s.page==="teleop"&&s.teleopStep===2;returnEnabled: s.robot==="kuavo-5w" ? kuavoTeleop.canReturn : !teleop.locked;onReturnClicked: backend.returnTeleop()}
                 Setup {width: parent.width;visible: s.page==="teleop"&&s.teleopStep===1}
+                Txt {
+                    property var queue: ((s.storage || {}).registrations || {})[s.robot] || {}
+                    visible: s.page==="teleop" && s.teleopStep===2 && (queue.registered>0 || queue.pending>0)
+                    width: parent.width
+                    text: "已提交平台 " + (queue.registered || 0) + " 个回合 · 待提交 " + (queue.pending || 0) + (queue.error ? " · " + queue.error : "")
+                    wrapMode: Text.Wrap
+                    color: queue.failed ? Theme.red : Theme.inkMuted
+                }
                 Teleop {id: teleop;objectName: "teleopWorkspace";width: parent.width;visible: s.page==="teleop"&&s.teleopStep===2&&s.robot!=="kuavo-5w"}
                 Kuavo {id: kuavoTeleop;objectName: "kuavoWorkspace";width: parent.width;visible: s.page==="teleop"&&s.teleopStep===2&&s.robot==="kuavo-5w"}
                 Umi {id: umiPanel;objectName: "umiWorkspace";width: parent.width;visible: s.page==="umi"}
                 Card {visible: s.page==="ego";width: parent.width;height: 580}
-                Btn {visible: app.narrow && !backend.rawOnly;text: "退出登录";glyph: "LogOut";ghost: true;enabled: !s.busy;onClicked: backend.logout()}
+                Btn {visible: app.narrow;text: "返回登录页";glyph: "LogOut";ghost: true;enabled: !s.busy;onClicked: backend.logout()}
             }
         }
         Connections {target: backend;property string lastPage: "teleop";function onChanged(){if(lastPage!==backend.state.page){scroll.contentY=0;lastPage=backend.state.page}}}

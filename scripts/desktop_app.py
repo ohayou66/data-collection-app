@@ -11,7 +11,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from generate_runtime_config import platform_urls, read_env
+from generate_runtime_config import read_env
+from recording_mode import launch_values
 
 
 def desktop_text_scale() -> float:
@@ -63,23 +64,24 @@ def main() -> int:
     parser.add_argument('--mock', action='store_true', help='模拟机器人后端')
     parser.add_argument('--demo', action='store_true', help='界面演示，不启动采集服务')
     parser.add_argument('--software-rendering', action='store_true', help='使用 Mesa CPU 渲染完整三维模型')
+    parser.add_argument('--storage-mode', choices=('raw-only', 'local-platform'))
     args = parser.parse_args()
     values = read_env(ROOT / '.env')
-    values.update(platform_urls(values))
     values['APP_COLLECTION_MODE'] = os.environ.get('APP_COLLECTION_MODE', values.get('APP_COLLECTION_MODE', 'all'))
     from board_graphics import prepare_desktop, backend_environment
     prepare_desktop(values, software=args.software_rendering)
     service_env = backend_environment()
     configure_rendering(values, software=args.software_rendering)
     from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, QUrl, Qt, Slot
-    from PySide6.QtGui import QGuiApplication, QIcon
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
     from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
     from qt_ui.bridge import Bridge
     from qt_ui.visuals import CameraItem, CurveItem, Backdrop, G2View, RobotScene
     from qt_ui.record_keys import UmiRecordKeys
 
     configure_surface_format()
-    app = QGuiApplication(sys.argv[:1])
+    app = QApplication(sys.argv[:1])
     app.setOrganizationName('XiaokaiLab')
     app.setApplicationName('xiaokai-lab-data-collection')
     app.setApplicationDisplayName('小凯实验室数采平台')
@@ -88,8 +90,7 @@ def main() -> int:
     app.setQuitOnLastWindowClosed(False)
     for name, cls in [('CameraItem',CameraItem),('CurveItem',CurveItem),('Backdrop',Backdrop),('G2View',G2View)]:
         qmlRegisterType(cls, 'Collection.Native', 1, 0, name)
-    if args.demo: values['LOCAL_CONTROL_URL']='http://127.0.0.1:1'
-    bridge = Bridge(values, demo=args.demo)
+    bridge = Bridge({**values, 'DATA_COLLECTION_STORAGE_MODE': args.storage_mode or 'raw-only'}, demo=args.demo)
     scene = RobotScene(ROOT, load_model=not bridge.umiOnly)
     bridge.changed.connect(lambda: scene.update_pose(bridge.state['tianji'],bridge.calibration))
     engine = QQmlApplicationEngine()
@@ -110,6 +111,7 @@ def main() -> int:
         def __init__(self):
             super().__init__()
             self.closing = False
+            self.restarting = False
             self.buffer = ''
             self.tail = deque(maxlen=35)
             self.process = QProcess(self)
@@ -119,6 +121,7 @@ def main() -> int:
             env.insert('PYTHONUNBUFFERED', '1')
             self.process.setProcessEnvironment(env)
             self.process.setWorkingDirectory(str(ROOT))
+            self.process.started.connect(self.on_started)
             self.process.readyReadStandardOutput.connect(self.output)
             self.process.finished.connect(self.finished)
             self.process.errorOccurred.connect(self.error)
@@ -131,9 +134,37 @@ def main() -> int:
                 self.log = (logdir/'desktop.log').open('w')
             except OSError: pass
         def start(self):
+            if self.closing or self.process.state() != QProcess.NotRunning:
+                return
+            mode = bridge.values['DATA_COLLECTION_STORAGE_MODE']
+            try:
+                bridge.values = launch_values(values, mode)
+            except ValueError as exc:
+                bridge.serviceFailed(str(exc))
+                return
+            self.tail.clear()
+            self.buffer = ''
             if args.demo: bridge.serviceReady();return
-            self.process.start(sys.executable, [str(ROOT/'scripts/run_app.py'), '--backend-only', '--no-browser', *(['--mock'] if args.mock else [])])
+            self.process.start(sys.executable, [str(ROOT/'scripts/run_app.py'), '--backend-only', '--no-browser', '--storage-mode', mode, *(['--mock'] if args.mock else [])])
             self.timeout.start(60000)
+        def switch_mode(self):
+            self.timeout.stop()
+            if self.process.state() == QProcess.NotRunning:
+                self.start()
+            elif not self.restarting:
+                self.restarting = True
+                if self.process.state() == QProcess.Running:
+                    self.interrupt()
+        def on_started(self):
+            if self.restarting or self.closing:
+                self.interrupt()
+        def interrupt(self):
+            pid = self.process.processId()
+            if pid > 0:
+                try:
+                    os.kill(pid, signal.SIGINT)
+                except ProcessLookupError:
+                    pass
         def output(self):
             output = bytes(self.process.readAllStandardOutput()).decode('utf-8',errors='replace')
             if self.log: self.log.write(output);self.log.flush()
@@ -142,14 +173,22 @@ def main() -> int:
             lines = self.buffer.split('\n');self.buffer = lines.pop()
             for line in lines:
                 self.tail.append(line)
-                if line.strip() == 'NATIVE_SERVICE_READY' and not self.closing:
+                if line.strip() == 'NATIVE_SERVICE_READY' and not (self.closing or self.restarting):
                     self.timeout.stop();bridge.serviceReady()
         def error(self, error):
             if error == QProcess.FailedToStart:
-                self.timeout.stop();bridge.serviceFailed('本机采集服务无法启动：'+self.process.errorString())
+                self.timeout.stop()
+                if self.closing: app.quit()
+                elif self.restarting:
+                    self.restarting = False
+                    self.start()
+                else: bridge.serviceFailed('本机采集服务无法启动：'+self.process.errorString())
         def finished(self, code, _status):
             self.output();self.timeout.stop()
             if self.closing: app.quit()
+            elif self.restarting:
+                self.restarting = False
+                self.start()
             else: bridge.serviceFailed('本机服务已退出（'+str(code)+'）：\n'+'\n'.join(self.tail)[-2500:])
         @Slot()
         def close(self):
@@ -157,13 +196,15 @@ def main() -> int:
             self.closing = True;self.timeout.stop();bridge.shutdown()
             if self.process.state() == QProcess.NotRunning: app.quit();return
             # Supervisor first saves UMI, then shuts down all child processes.
-            os.kill(self.process.processId(), signal.SIGINT)
+            if self.process.state() == QProcess.Running and not self.restarting:
+                self.interrupt()
             QTimer.singleShot(260000, self.force_stop)
         def force_stop(self):
             if self.process.state() != QProcess.NotRunning:
                 self.process.terminate()
                 QTimer.singleShot(6000, self.process.kill)
     runtime = Runtime()
+    bridge.storageModeChanged.connect(runtime.switch_mode)
     bridge.closeRequested.connect(runtime.close)
     signal.signal(signal.SIGINT, lambda *_: runtime.close())
     signal.signal(signal.SIGTERM, lambda *_: runtime.close())

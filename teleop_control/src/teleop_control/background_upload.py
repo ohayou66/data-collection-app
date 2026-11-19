@@ -97,7 +97,9 @@ def uploader_spec(uploader):
     if isinstance(uploader, UmiRosbagUploader):
         return dict(kind='umi', root=str(uploader.root.parent.resolve()))
     return dict(kind='teleop', root=str(uploader.output_root.resolve()),
-                discover_completed=uploader.discover_completed)
+                discover_completed=uploader.discover_completed,
+                **({'local_destination': uploader.local_destination, 'capture_root': str(uploader.capture_root)}
+                   if uploader.local_destination else {}))
 
 
 def status_file(root, spec):
@@ -144,16 +146,17 @@ def ensure_service(data_root, uploaders, *, systemd=True, default_destination=No
         previous = json.loads(config_path.read_text())
         # Release workspaces may change on upgrade. Keep scanning their queues
         # until the operator explicitly removes the old recording directories.
-        for spec in previous.get('uploaders', []):
-            if spec not in queue_specs:
-                queue_specs.append(spec)
-        default_destination = previous.get('default_destination') or default_destination
+        if not any(item.get('local_destination') for item in specs):
+            for spec in previous.get('uploaders', []):
+                if spec not in queue_specs and not spec.get('lerobot_destination'):
+                    queue_specs.append(spec)
+            default_destination = previous.get('default_destination') or default_destination
     except (OSError, ValueError):
         pass
     # Persistent workers can outlive an in-place app update. Restart gracefully
     # when their implementation changes, including camera/curve export policy.
     implementation=hashlib.sha256(b''.join(Path(__file__).with_name(name).read_bytes()
-        for name in ('background_upload.py','collection_uploader.py','tianji_export.py','umi_uploader.py'))).hexdigest()
+        for name in ('background_upload.py','collection_uploader.py','tianji_export.py','umi_uploader.py','umi_queue.py'))).hexdigest()
     config = dict(version=1, implementation=implementation, uploaders=queue_specs, default_destination=default_destination)
     private_json(config_path, config)
     for uploader, spec in zip(uploaders, specs):
@@ -236,11 +239,16 @@ def run(config_path):
         credentials = UploadCredentials(root)
         uploaders = []
         for spec in config['uploaders']:
+            if spec.get('lerobot_destination'):
+                continue  # An older queue used client-side conversion.
             if spec['kind'] == 'umi':
                 uploader = UmiRosbagUploader(spec['root'], 'http://unused.invalid', targets=credentials)
             elif spec['kind'] == 'teleop':
                 uploader = CollectionUploader(spec['root'], 'http://unused.invalid', targets=credentials,
                                               discover_completed=spec.get('discover_completed', False))
+                uploader.local_destination = spec.get('local_destination')
+                if uploader.local_destination:
+                    uploader.capture_root = Path(spec['capture_root'])
             else:
                 raise ValueError('Unsupported background upload source')
             uploaders.append((spec, uploader))

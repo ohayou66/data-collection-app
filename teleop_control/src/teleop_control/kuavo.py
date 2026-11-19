@@ -98,7 +98,9 @@ class KuavoManager:
         self.controller, self.other_idle, self.root = controller, other_idle, Path(root)
         from .kuavo_cameras import KuavoCameras
         self.cameras = KuavoCameras(self.root)
-        self.collection=KuavoCollection(self,self.root/'teleop_control/runtime/kuavo/collection-episodes')
+        from .runtime_paths import teleop_data_root
+        self.collection = KuavoCollection(self, teleop_data_root(self.root) / 'kuavo',
+                                          settings_path=self.root/'teleop_control/runtime/kuavo/collection.json')
         self.cameras.recording_guard=self.collection.active
         self.lock = threading.RLock()
         self.operation = threading.Lock()

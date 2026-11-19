@@ -18,7 +18,7 @@ import time
 import uuid
 from pydantic import BaseModel, ConfigDict
 from typing import Literal
-from .collection_gate import collection_available, collection_context
+from .collection_gate import collection_available, collection_context, local_directory_capture
 from .collection_uploader import READY_MARKER
 from .kuavo_preview import ARM_NAMES
 from .kuavo_recording import decode_events
@@ -43,8 +43,8 @@ class CollectionSettings(BaseModel):
     save_button:Literal['B']='B'
 
 class KuavoCollection:
-    def __init__(self, manager, output):
-        self.manager=manager;self.output=Path(output);self.path=self.output.parent/'collection.json'
+    def __init__(self, manager, output, *, settings_path=None):
+        self.manager=manager;self.output=Path(output);self.path=settings_path or self.output.parent/'collection.json'
         self.settings=CollectionSettings().model_dump();self.error=''
         try:
             if self.path.exists():self.settings=CollectionSettings(**json.loads(self.path.read_text())).model_dump()
@@ -290,7 +290,8 @@ class KuavoCollection:
             alignment_windows_scope='preview_only_raw_samples_not_filtered')
         meta.update(ep['annotations'].export(b['timestamp_ns'] for b in bundles))
         dump(directory/'meta_info.json',meta)
-        if complete:
+        if complete or (data_available and local_directory_capture(ep['context'])):
             dump(directory/READY_MARKER,dict(import_task_id='kuavo-'+self.session,import_folder=self.options.get('task','KUAVO 遥操作'),teleop_session_id=self.session,requested_cameras=[r+'_color' for r in ROLES if ep['cameras'][r]],source='teleop',collection_trigger='controller',**ep['context']))
+        if complete:
             self.completed+=1;self.phase='saved';self.error=''
         else:self.phase='incomplete';self.error=meta['error']

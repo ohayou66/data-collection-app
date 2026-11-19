@@ -72,6 +72,7 @@ class Bridge(QObject):
     teleopCameraSettingsApplied=Signal(bool,str)
     result=Signal(str, bool)
     closeRequested=Signal()
+    storageModeChanged=Signal()
     def __init__(self, values, *, demo=False, settings_path=None):
         super().__init__()
         self.values=values
@@ -132,8 +133,10 @@ class Bridge(QObject):
     def robotKeys(self): return list(robot_keys(self.values.get('APP_COLLECTION_MODE', 'all')))
     @Property('QStringList',constant=True)
     def robotNames(self): return [ROBOT_NAMES[key] for key in self.robotKeys]
-    @Property(bool,constant=True)
+    @Property(bool,notify=storageModeChanged)
     def rawOnly(self): return self.values.get('DATA_COLLECTION_STORAGE_MODE') == 'raw-only'
+    @Property(bool,notify=storageModeChanged)
+    def localPlatform(self): return self.values.get('DATA_COLLECTION_STORAGE_MODE') == 'local-platform'
     @Property('QVariantMap',notify=umiTelemetryChanged)
     def umiTelemetry(self): return self.telemetry.value
     @Property('QVariantMap',notify=umiTelemetryChanged)
@@ -269,21 +272,45 @@ class Bridge(QObject):
             QTimer.singleShot(30,lambda:finish(self.demo_action(path,payload)))
         else:self.request(path,payload,finish,method='POST',timeout=timeout,failed=failed)
 
+    @Slot(str)
+    def selectStorageMode(self, mode):
+        if mode not in ('raw-only', 'local-platform') or mode == self.values.get('DATA_COLLECTION_STORAGE_MODE'):
+            return
+        if self._state['authenticated'] or self._state['busy'] or self._state['closing']:
+            return
+        self.serviceFailed('')  # Invalidate requests from the previous service.
+        self.values = {**self.values, 'DATA_COLLECTION_STORAGE_MODE': mode}
+        self.update(uploadTarget={}, preferences={}, storagePath='', storage={})
+        self.storageModeChanged.emit()
+
+    @Slot()
+    def enterLocal(self):
+        if self.rawOnly and self._state['ready'] and not (self._state['closing'] or self._state['busy']):
+            self.update(authenticated=True, username='本地采集', error='')
+            self.poll()
+
     @Slot()
     def serviceReady(self):
         self.auth_revision+=1;auth_revision=self.auth_revision
-        self.update(ready=True,startupError='',error='',notice='')
-        if self.demo:return
-        if not self.umiOnly:self.loadSubtaskConfigs()
-        if self.rawOnly:
-            def local_ready(value):
-                if auth_revision != self.auth_revision or self._state['closing']:return
-                if value.get('storage_mode') != 'raw-only' or not value.get('local_session'):
-                    self.fail('本地保存模式与后台配置不一致');return
-                self.update(authenticated=True, username='本地采集', uploadTarget={}, preferences={},storagePath=value.get('rosbag_path',''))
-                self.poll()
-            self.request('/storage/status', done=local_ready)
+        if self.demo:
+            self.update(ready=True,startupError='',error='',notice='')
             return
+        def ready(status):
+            if auth_revision != self.auth_revision or self._state['closing']:return
+            if self.rawOnly or self.localPlatform:
+                if (status.get('storage_mode') != self.values['DATA_COLLECTION_STORAGE_MODE']
+                        or (self.rawOnly and not status.get('local_session'))):
+                    self.serviceFailed('所选采集模式与后台配置不一致')
+                    return
+            self.update(ready=True,startupError='',error='',notice='',storagePath=status.get('rosbag_path',''))
+            if not self.umiOnly:self.loadSubtaskConfigs()
+            if not self.rawOnly:self.load_login_preferences(auth_revision)
+        if self.rawOnly or self.localPlatform:
+            self.request('/storage/status', done=ready, failed=self.serviceFailed)
+        else:
+            ready({})
+
+    def load_login_preferences(self, auth_revision):
         def current():
             return auth_revision==self.auth_revision and not self._state['closing']
         def preferences(value):
@@ -1171,18 +1198,20 @@ class Bridge(QObject):
 
     @Slot()
     def logout(self):
-        if self.rawOnly:return
+        if not self._state['authenticated']:return
         if self.teleop_active() or self._state['umi'].get('state') not in ('idle','error'):
             self.fail('请先结束采集和控制，再退出登录');return
         def done(_):
             self.epoch+=1;self.auth_revision+=1;self.pending.clear();self.last_poll.clear()
             self.reset_camera_brightness()
-            appearance={key:self._state[key] for key in ('theme','tianjiCameraLayout','g2CameraLayout','uploadTarget','task')}
+            appearance={key:self._state[key] for key in ('theme','tianjiCameraLayout','g2CameraLayout','uploadTarget','storagePath','task')}
             self._state=initial_state()
             if self.umiOnly:self._state['page']='umi'
             self.update(ready=True,**appearance)
         self.save_timer.stop()
-        def clear_login(_):self.action('logout','/platform/auth/logout',done=done,timeout=30000)
+        def clear_login(_):
+            if self.rawOnly:done(None)
+            else:self.action('logout','/platform/auth/logout',done=done,timeout=30000)
         self.action('close','/tianji/close',done=clear_login)
 
     @Slot()
@@ -1200,6 +1229,8 @@ class Bridge(QObject):
         if self.demo or not s['authenticated'] or s['closing']:return
         now=time.monotonic()
         requests=[('umi','/umi/status',1.)]
+        if self.values.get('DATA_COLLECTION_STORAGE_MODE') == 'local-platform' and s['page'] == 'teleop' and s['teleopStep'] == 2:
+            requests.append(('storage', '/storage/status', 2.))
         if s['robot']=='kuavo-5w' and s['teleopStep']==2 or s['kuavo'].get('active'):
             requests.append(('kuavo','/kuavo/status',.5))
         if s['teleopStep']==2 and s['robot']=='tianji':requests.append(('tianji','/tianji/status',.1))

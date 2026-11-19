@@ -76,7 +76,7 @@ def main():
             f"LOCAL_CONTROL_PORT={control_port}\nLOCAL_CONTROL_URL=http://127.0.0.1:{control_port}\n"
             f"PLATFORM_API_URL=http://127.0.0.1:{monitor_port}/api\nPLATFORM_WEB_URL=http://127.0.0.1:{monitor_port}\n"
             f"TELEOP_GDK_PYTHON={python}\nUMI_DATA_ROOT={root}/recordings\n"
-            f"TELEOP_OUTPUT={root}/teleop\nGDK_RIGHT_ARM_IMPORT_ROOT={root}/right\n"
+            f"TELEOP_DATA_ROOT={root}/teleop\nGDK_RIGHT_ARM_IMPORT_ROOT={root}/right\n"
             f"UMI_MONITOR_URL=http://127.0.0.1:{monitor_port}\n"
             f"TELEOP_GDK_APP_ROOT={root}/no-sdk\n"
         )
@@ -95,7 +95,7 @@ def main():
                 [
                     "/usr/bin/python3",
                     str(package / "scripts/package_launcher.py"),
-                    "--headless",
+                    "--headless", "--storage-mode", "local-platform",
                 ],
                 env=env,
                 stdout=output,
@@ -171,7 +171,7 @@ def main():
         work=next(p for p in works if not p.name.startswith('.'))
         ui_env={**env, "QT_QPA_PLATFORM":"offscreen", "QSG_RHI_BACKEND":"opengl", "QSG_RENDER_LOOP":"basic", "QT_SCALE_FACTOR":"1", "LIBGL_ALWAYS_SOFTWARE":"1", "XDG_STATE_HOME":str(root/"state")}
         with log.open("w") as output:
-            gui=subprocess.Popen(["/usr/bin/python3",str(package/"scripts/package_launcher.py")],env=ui_env,stdout=output,stderr=subprocess.STDOUT)
+            gui=subprocess.Popen(["/usr/bin/python3",str(package/"scripts/package_launcher.py"),"--storage-mode","raw-only"],env=ui_env,stdout=output,stderr=subprocess.STDOUT)
         try:
             deadline=time.monotonic()+45
             while "NATIVE_SERVICE_READY" not in log.read_text():

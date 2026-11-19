@@ -10,8 +10,10 @@ import pytest
 from teleop_control import tianji_worker as worker
 
 
-@pytest.mark.parametrize("failure", [None, "stop", "release"])
-def test_stop_releases_faulted_connection_and_allows_a_fresh_check(monkeypatch, tmp_path, failure):
+@pytest.mark.parametrize(("next_action", "failure"), [
+    ("check", None), ("stop", None), ("stop", "stop"), ("stop", "release"),
+])
+def test_failed_preflight_allows_a_fresh_check(monkeypatch, tmp_path, next_action, failure):
     incoming = queue.Queue()
     robots, samples = [], []
     phase = "fault"
@@ -73,6 +75,10 @@ def test_stop_releases_faulted_connection_and_allows_a_fresh_check(monkeypatch, 
                 if not robots or robots[0].reads == 0:
                     return  # Command reader may not have queued preflight yet.
                 robots[0].failure = failure
+                if next_action == "check":
+                    command("check")
+                    phase = "rechecking"
+                    return
                 command("stop")
                 phase = "failed_stop" if failure else "stopping"
             elif phase == "failed_stop":
@@ -95,6 +101,7 @@ def test_stop_releases_faulted_connection_and_allows_a_fresh_check(monkeypatch, 
             elif phase == "stopping" and idle_samples:
                 pytest.fail("A successful stop returned to the old feedback error")
             elif phase == "rechecking" and len(robots) == 2:
+                assert robots[0].closed
                 assert robots[1].reads > 0 and not robots[1].closed
                 assert row["state"] == "idle" and row["joints_deg"]
                 phase = "complete"

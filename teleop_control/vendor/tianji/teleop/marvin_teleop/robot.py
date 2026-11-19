@@ -30,6 +30,10 @@ class CommandExpired(RuntimeError):
     """A VR goal expired before send; discard it and send a measured hold."""
 
 
+class InitialHoldRejected(RuntimeError):
+    """SDK rejected the measured pose while preparing position mode."""
+
+
 class Robot:
     def __init__(self, config):
         from SDK_PYTHON.fx_robot import Marvin_Robot, DCSS
@@ -258,10 +262,11 @@ class Robot:
         self._clear_buffer("clear_set")
         for side in sorted(selected):
             channel = self.config["arm_channels"][side]
-            self.checked(
-                self.api.set_joint_cmd_pose(channel, q[side].tolist()),
-                "set initial hold",
-            )
+            if not self.api.set_joint_cmd_pose(channel, q[side].tolist()):
+                raise InitialHoldRejected(
+                    f"{side}（通道 {channel}）：SDK 拒绝写入初始保持位置。"
+                    "请重新检查设备以重建 SDK 连接；若仍失败，请核对控制器与 SDK 的版本。"
+                )
             # Python already limits every streamed step's speed/acceleration.
             # Do not add a second 10%-speed profile inside the controller.
             self.checked(self.api.set_vel_acc(channel, 100, 100), "set_vel_acc")

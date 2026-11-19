@@ -28,9 +28,8 @@ from .models import (
 from .preview import GdkPreview
 from .umi import UmiManager
 from .umi_handoff import UmiControlHandoff
-from .umi_uploader import UmiRosbagUploader
 from .xr_service import XrServiceLauncher
-from .runtime_paths import legacy_robot_python, resolve_robot_python, resolve_gdk_root, resolve_xr_service
+from .runtime_paths import teleop_data_root, legacy_robot_python, resolve_robot_python, resolve_gdk_root, resolve_xr_service
 
 
 class MockController:
@@ -171,7 +170,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output",
-        default=os.getenv("TELEOP_OUTPUT", "~/agibot_episodes/dual_arm"),
+        default=str(teleop_data_root() / 'g2'),
     )
     parser.add_argument("--task", default=os.getenv("TELEOP_TASK", "web-teleop"))
     parser.add_argument(
@@ -192,7 +191,7 @@ def parse_args() -> argparse.Namespace:
         "--umi-project", default=os.getenv("UMI_PROJECT_ROOT", default_umi_project())
     )
     parser.add_argument(
-        "--umi-data-root", default=os.getenv("UMI_DATA_ROOT", "~/galaxis_data")
+        "--umi-data-root", default=str(teleop_data_root() / "umi")
     )
     parser.add_argument("--umi-python", default=os.getenv("UMI_PYTHON", sys.executable))
     parser.add_argument(
@@ -329,6 +328,8 @@ def main() -> None:
     from .adb_runtime import configure_adb_environment
     configure_adb_environment()
     args = parse_args()
+    for path in (Path(args.output), teleop_data_root() / 'tianji', teleop_data_root() / 'kuavo'):
+        path.expanduser().mkdir(parents=True, exist_ok=True)
     # The collector must recognize this exact bridge when handing PICO from
     # robot teleoperation back to UMI, including a private packaged runtime.
     os.environ["TELEOP_XR_SERVICE"] = args.xr_service
@@ -344,16 +345,21 @@ def main() -> None:
     root = Path(__file__).parents[3]
     headset_setup = GalaxisHeadsetSetup(adb_path=args.adb)
     xr_service = XrServiceLauncher(args.xr_service)
-    from .raw_storage import RawOnlySession, raw_only_enabled
-    raw_only = raw_only_enabled()
-    login = None if raw_only else PlatformLogin(args.api_url)
-    targets = RawOnlySession() if raw_only else UploadTargets(Path(args.umi_data_root), login,
+    from .raw_storage import RawOnlySession
+    local_platform = os.environ.get('DATA_COLLECTION_STORAGE_MODE') == 'local-platform'
+    umi_root = Path(args.umi_data_root).expanduser().resolve()
+    if local_platform and umi_root != teleop_data_root() / 'umi':
+        raise ValueError('上传本机平台时，UMI 目录须为平台共享的 data/umi')
+    (umi_root / 'rosbags').mkdir(parents=True, exist_ok=True)
+    # Existing session preferences and background credentials live outside the capture mount.
+    state_root = Path(os.environ.get('UMI_DATA_ROOT') or '~/galaxis_data').expanduser()
+    targets = RawOnlySession() if not local_platform else UploadTargets(state_root, PlatformLogin(args.api_url),
                             os.getenv('PLATFORM_WEB_URL', 'http://127.0.0.1:5173'),
-                            local_api=os.getenv('UMI_LOCAL_API_URL', 'http://127.0.0.1:8000'),
-                            local_web=os.getenv('UMI_LOCAL_WEB_URL', 'http://127.0.0.1:5173'))
-    gate = CollectionGate(Path(args.umi_data_root).expanduser() / ".collection-platform.json", targets)
+                            local_directory_import=True)
+    queue_root = state_root / '.teleop-local-platform'
+    # The recorder reads this same lease at /opt/data/.collection-platform.json.
+    gate = CollectionGate(umi_root / ".collection-platform.json", targets)
     gate.start()
-    umi_gate = gate
     umi = UmiManager(
         args.umi_project,
         args.umi_data_root,
@@ -362,7 +368,7 @@ def main() -> None:
         runtime_dir=root / "teleop_control" / "runtime" / "umi",
         prepare_check=lambda: prepare_umi_device_check(headset_setup),
     )
-    umi.collection_gate_path = umi_gate.path
+    umi.collection_gate_path = gate.path
     umi.upload_targets = targets
     controller = build_controller(
         args,
@@ -370,17 +376,15 @@ def main() -> None:
         headset_setup=headset_setup,
         xr_service=xr_service,
     )
-    umi_uploader = None if raw_only else UmiRosbagUploader(args.umi_data_root, args.api_url, targets=targets)
     app = create_app(
         controller,
         cors_origins=[item.strip() for item in origins.split(",")],
         preview=build_preview(args),
         umi=umi,
-        umi_uploader=umi_uploader,
         platform_api_url=args.api_url,
         platform_login=targets,
         upload_targets=targets,
-        umi_gate=umi_gate,
+        umi_gate=gate,
     )
     uploaders = []
     if not args.mock:
@@ -390,29 +394,24 @@ def main() -> None:
             # Existing queued captures remain intact. The recording preflight
             # refuses new captures until the independent worker is ready.
             print(f"天机后台保存服务未就绪：{exc}", file=sys.stderr)
-    if not raw_only:
-        uploaders = [
-            CollectionUploader(args.output, args.api_url, targets=targets),
-            umi_uploader,
-        ]
-        tianji_uploader = CollectionUploader(app.state.tianji_manager.collection.saved_output, args.api_url, targets=targets)
-        app.state.tianji_manager.collection.uploader = tianji_uploader
-        uploaders.append(tianji_uploader)
-        kuavo_uploader=CollectionUploader(app.state.kuavo_manager.collection.output,args.api_url,targets=targets)
-        app.state.kuavo_manager.collection.uploader=kuavo_uploader
-        uploaders.append(kuavo_uploader)
-        output_root = Path(args.output).expanduser().resolve()
-        right_arm_root = Path(args.right_arm_import_root).expanduser().resolve()
-        if right_arm_root != output_root:
-            uploaders.append(
-                CollectionUploader(
-                    right_arm_root,
-                    args.api_url,
-                    discover_completed=True, targets=targets,
-                )
-            )
+    if local_platform:
+        tianji = app.state.tianji_manager.collection
+        kuavo = app.state.kuavo_manager.collection
+        devices = {'agibot-g2': args.output, 'tianji': tianji.saved_output, 'kuavo-5w': kuavo.output,
+                   'umi': umi_root / 'rosbags'}
+        registrations = {}
+        for robot, output in devices.items():
+            uploader = CollectionUploader(output, args.api_url, targets=targets)
+            uploader.local_destination = targets.snapshot()
+            uploader.capture_root = teleop_data_root()
+            registrations[robot] = uploader
+        app.state.local_registrations = registrations
+        umi.directory_registration = registrations['umi']
+        tianji.uploader = registrations['tianji']
+        kuavo.uploader = registrations['kuavo-5w']
+        uploaders = list(registrations.values())
         from .background_upload import ensure_service
-        targets.background_credentials = ensure_service(args.umi_data_root, uploaders,
+        targets.background_credentials = ensure_service(queue_root, uploaders,
             systemd=not args.mock, default_destination=targets.targets[targets.default_kind])
     try:
         # MJPEG responses are intentionally long-lived. Bound graceful shutdown

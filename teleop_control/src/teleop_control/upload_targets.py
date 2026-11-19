@@ -21,9 +21,14 @@ def checked_url(value: str) -> str:
     return value
 
 
+def local_token_path(default_path, api_url):
+    key = hashlib.sha256(api_url.rstrip('/').encode()).hexdigest()[:16]
+    return Path(default_path).with_name(f'platform-local-{key}.json')
+
+
 class UploadTargets:
     def __init__(self, data_root: Path, default_login: PlatformLogin, web_url: str,
-                 *, local_api='http://127.0.0.1:8000', local_web='http://127.0.0.1:5173'):
+                 *, local_api='http://127.0.0.1:8000', local_web='http://127.0.0.1:5173', local_directory_import=False):
         self.lock = threading.RLock()
         self.background_credentials = None
         self.path = Path(data_root).expanduser() / '.umi-upload-target.json'
@@ -33,10 +38,13 @@ class UploadTargets:
         self.logins = {self.default_kind: default_login}
         if self.default_kind != 'local':
             url = checked_url(local_api)
-            key = hashlib.sha256(url.encode()).hexdigest()[:16]
-            token_path = default_login.store.path.with_name(f'platform-local-{key}.json')
+            token_path = local_token_path(default_login.store.path, url)
             self.targets['local'] = dict(kind='local', api_url=url, web_url=checked_url(local_web))
             self.logins['local'] = PlatformLogin(url, PlatformTokenStore(token_path))
+        if local_directory_import:
+            if self.default_kind != 'local':
+                raise ValueError('遥操作上传仅支持本机平台')
+            self.targets['local']['storage_mode'] = 'local_raw'
         self.selected = self.default_kind
         try:
             previous = json.loads(self.path.read_text())

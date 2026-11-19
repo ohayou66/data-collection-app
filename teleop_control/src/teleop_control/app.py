@@ -218,7 +218,12 @@ def create_app(
     @app.get("/storage/status")
     def storage_status():
         raw_only = getattr(login_service, 'raw_only', False) is True
-        return dict(storage_mode='raw-only' if raw_only else 'platform',
+        from .upload_targets import UploadTargets
+        mode = 'raw-only' if raw_only else 'platform'
+        if isinstance(upload_targets, UploadTargets) and upload_targets.snapshot().get('storage_mode') == 'local_raw':
+            mode = 'local-platform'
+        return dict(storage_mode=mode,
+                    registrations={robot: queue.status() for robot, queue in getattr(app.state, "local_registrations", {}).items()},
                     upload_enabled=not raw_only,
                     local_session=raw_only,
                     rosbag_path=str(umi.data_root / 'rosbags') if umi is not None else '')
@@ -399,7 +404,8 @@ def create_app(
 
     @app.post("/umi/import/scan", response_model=UmiStatus)
     async def scan_umi_imports() -> UmiStatus:
-        if getattr(login_service, 'raw_only', False) is True:
+        # The independent local directory worker retries registration on each scan.
+        if getattr(login_service, 'raw_only', False) is True or 'umi' in getattr(app.state, 'local_registrations', {}):
             from .raw_storage import retry_raw_finalization
             await asyncio.to_thread(retry_raw_finalization, require_umi().data_root)
             return await asyncio.to_thread(require_umi().status)

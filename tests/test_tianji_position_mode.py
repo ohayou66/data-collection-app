@@ -88,6 +88,14 @@ def test_position_mode_setter_failure_prevents_enable_packet(session):
     assert not session.robot.enabled
 
 
+def test_rejected_initial_hold_identifies_arm_without_sending_partial_enable(session):
+    session.api.set_joint_cmd_pose.side_effect = [True, False]
+    with pytest.raises(tianji_worker.InitialHoldRejected, match="right（通道 B）"):
+        session.robot.enable()
+    session.api.send_cmd.assert_not_called()
+    assert not session.robot.enabled
+
+
 def test_feedback_counter_wrap_keeps_enabled_arms_running(session, monkeypatch):
     robot = session.robot
     session.feedback.advance = False

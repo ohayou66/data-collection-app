@@ -283,8 +283,9 @@ def _process_request(root,source,request):
         if target.exists(): raise RuntimeError('发布前目标目录已存在，拒绝覆盖')
         publish_noreplace(attempt,target)
         sync_dir(target_root)
-    # Platform uploads see only published, valid episodes, never an in-progress folder.
-    if metadata.get('complete') and metadata.get('actions_recorded'):
+    from .collection_gate import local_directory_capture
+    # Publish the marker after the atomic rename, including finalized low-quality local captures.
+    if (local_directory_capture(request['info']) or (metadata.get('complete') and metadata.get('actions_recorded'))) and not (target/READY).exists():
         atomic_json(target/READY,request['info'])
     result=dict(episode=source.name,job_id=request['job_id'],
         session=request['info'].get('teleop_session_id',''),

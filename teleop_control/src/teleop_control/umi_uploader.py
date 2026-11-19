@@ -13,8 +13,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-import yaml
 
+from .umi_queue import completed_mcap
 from .collection_gate import collection_available
 from .platform_auth import (
     current_platform_username,
@@ -172,6 +172,9 @@ class UmiRosbagUploader:
             resolved = False
             try:
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                if (meta.get("upload_destination") == {"kind": "raw-only"} or
+                        (meta.get("upload_destination") or {}).get("storage_mode") == "local_raw"):
+                    continue
                 owner = meta.get("author")
                 store = None
                 if self.targets is not None:
@@ -240,23 +243,7 @@ class UmiRosbagUploader:
         if meta.get("recording_format") == "umi-mp4-v1" and not compact:
             raise ValueError("MP4 recording is missing its video manifest")
         payload_dir = video_manifest.parent if compact else episode_dir
-        metadata = yaml.safe_load((payload_dir / "metadata.yaml").read_text(encoding="utf-8"))
-        info = metadata["rosbag2_bagfile_information"]
-        names = info.get("relative_file_paths") or []
-        # The platform's rosbag ingest consumes one MCAP per Episode. Our
-        # recorder does not split bags; reject unexpected layouts explicitly.
-        if len(names) != 1 or not isinstance(names[0], str) or Path(names[0]).name != names[0]:
-            raise ValueError("rosbag Episode must contain one complete MCAP file")
-        mcap = payload_dir / names[0]
-        if mcap.suffix.lower() != ".mcap" or not mcap.is_file() or mcap.is_symlink():
-            raise ValueError("rosbag metadata references a missing MCAP file")
-        with mcap.open("rb") as handle:
-            magic = b"\x89MCAP0\r\n"
-            if handle.read(8) != magic or mcap.stat().st_size < 16:
-                raise ValueError("invalid MCAP header")
-            handle.seek(-8, 2)
-            if handle.read(8) != magic:
-                raise ValueError("MCAP has not been finalized")
+        mcap = completed_mcap(payload_dir)
         files = [mcap, payload_dir / "metadata.yaml", episode_dir / "meta.json"]
         video_files = []
         if compact:

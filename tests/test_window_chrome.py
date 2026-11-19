@@ -102,6 +102,18 @@ class WindowChromeTests(unittest.TestCase):
                         disable_notice_shadow(window.contentItem())
                         QTest.qWait(100)
                         assert window.grabWindow().save(str(Path(screenshot_dir) / f'notice-{width}.png'))
+                    feedback = 'left 尚未收到关节反馈'
+                    def show_queue(scope, online=True, error='', fresh=True):
+                        queue = dict(scope=scope, error=feedback, worker_online=online, pending=0, processing=0)
+                        backend.update(tianji=dict(original_status, collection=dict(error=error, local_save=queue)),
+                                       tianjiStatusFresh=fresh)
+                        QTest.qWait(10)
+                        return find_item('pageNoticeText').property('text')
+                    assert show_queue('all') == ''
+                    assert show_queue('all', online=False) == '后台保存服务未就绪，已排队的数据保留'
+                    assert show_queue('session', fresh=False) == ''
+                    assert show_queue('session') == feedback
+                    assert show_queue('session', error=feedback) == feedback
                     backend.update(tianji=original_status, notice='上传已恢复')
                     QTest.qWait(30)
                     assert (stepper.y(), workspace.y(), workspace.height(), scroll.property('contentHeight')) == baseline
@@ -210,6 +222,22 @@ class WindowChromeTests(unittest.TestCase):
                 assert 'ToolTip' not in Path('scripts/qt_ui/qml/Main.qml').read_text()
                 camera_qml = Path('scripts/qt_ui/qml/TeleopCameras.qml').read_text()
                 assert 'cameraIds' in camera_qml
+                backend.update(authenticated=False)
+                backend.selectStorageMode('raw-only')
+                backend.storageModeChanged.connect(backend.serviceReady)
+                backend.serviceReady()
+                assert find_item('loginPage', visible=True)
+                selector = find_item('loginStorageMode', visible=True)
+                assert selector.property('currentIndex') == 0
+                assert not find_item('loginUsername', visible=True)
+                selector.forceActiveFocus()
+                QTest.keyClick(window, Qt.Key_Down)
+                assert backend.localPlatform and find_item('loginUsername', visible=True)
+                assert not find_item('loginUploadTarget', visible=True)
+                QTest.keyClick(window, Qt.Key_Up)
+                assert backend.rawOnly and not backend.state['authenticated']
+                find_item('loginSubmit').click()
+                assert find_item('collectionPage', visible=True)
                 requests = []
                 backend.closeRequested.connect(lambda: requests.append('safe-close'))
                 backend.update(busy='record-stop')

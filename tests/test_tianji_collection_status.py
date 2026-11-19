@@ -10,6 +10,26 @@ from teleop_control.tianji_collection import TianjiCollection, CAMERA_MAPPING
 from FusionDataCollector.collector import Episode
 
 
+def test_close_ends_session_without_replaying_old_queue_errors(tmp_path, monkeypatch):
+    from teleop_control import tianji_local_queue
+    monkeypatch.setattr(tianji_local_queue, 'require_worker', lambda root: None)
+    monkeypatch.setattr(tianji_collection, 'current_platform_username', lambda: 'test')
+    collection = TianjiCollection(Mock(), output=tmp_path/'episodes')
+    collection.queue_root = tmp_path/'queue'
+    tianji_local_queue.configure(collection.queue_root, collection.output)
+    collection.arm({'task': 'test'})
+    failure = 'left 尚未收到关节反馈'
+    summary = dict(saved=2, incomplete=1, error=failure)
+    (collection.queue_root/'status.json').write_text(json.dumps({**summary, 'sessions': {collection.session: summary}}))
+    collection.error = failure
+    snapshot = collection.snapshot()
+    assert snapshot['local_save']['scope'] == 'session' and snapshot['completed'] == 2
+    collection.close()
+    snapshot = collection.snapshot()
+    assert snapshot['error'] == '' and snapshot['completed'] == 0
+    assert snapshot['local_save']['scope'] == 'all' and snapshot['local_save']['error'] == failure
+
+
 def test_elapsed_freezes_at_stop_through_saving_and_next_session(tmp_path, monkeypatch):
     clock = [100.]
     monkeypatch.setattr(tianji_collection.time, 'monotonic', lambda: clock[0])

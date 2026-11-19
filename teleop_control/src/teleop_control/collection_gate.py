@@ -18,6 +18,12 @@ def _lease_fresh(value):
     return 0 <= age < 10
 
 
+def local_directory_capture(info):
+    destination = info.get('upload_destination')
+    return (isinstance(destination, dict) and destination.get('kind') == 'local'
+            and destination.get('storage_mode') == 'local_raw' and bool(info.get('author')))
+
+
 def collection_context() -> dict:
     """Snapshot recording ownership; never infer it later from the active UI."""
     filename = os.environ.get("DATA_COLLECTION_GATE_FILE")
@@ -59,6 +65,7 @@ class CollectionGate:
                        checked_monotonic=time.monotonic())
         if getattr(self.login, 'raw_only', False) is True:
             payload['storage_mode'] = 'raw-only'
+            payload['upload_destination'] = {'kind': 'raw-only'}
         if destination is not None:
             payload['upload_destination'] = destination
         temporary.write_text(json.dumps(payload))
